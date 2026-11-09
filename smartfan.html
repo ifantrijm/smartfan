@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Room IoT</title>
+<!-- Pustaka MQTT.js via CDN -->
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; padding: 15px; background: #0f1115; color: #e2e8f0; font-family: 'Segoe UI', Arial, sans-serif; }
+.container { max-width: 500px; margin: auto; }
+
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 0 5px; }
+.header h2 { margin: 0; font-size: 24px; color: #0ea5e9; font-weight: 700; letter-spacing: 0.5px; }
+.header p { margin: 2px 0 0 0; color: #64748b; font-size: 13px; }
+
+.card { background: #1e222a; padding: 20px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid #2a2e37; }
+.card h3 { margin: 0 0 20px 0; font-size: 18px; color: #f8fafc; font-weight: 600; display:flex; align-items:center; gap:8px;}
+
+input { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #334155; background: #0f1115; color: white; border-radius: 12px; font-size: 15px; }
+input:focus { outline: none; border-color: #0ea5e9; }
+button { border: none; padding: 14px; border-radius: 12px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+button:active { transform: scale(0.97); }
+.full { width: 100%; }
+
+.on { background: #10b981; }
+.off { background: #ef4444; }
+.blue { background: #0ea5e9; }
+
+.logout-btn { background: #ef4444; padding: 10px 14px; border-radius: 10px; display: flex; align-items: center; gap:6px; font-size:13px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); }
+.logout-btn svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+.sensor { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+.sensor-box { text-align: center; background: #1e222a; padding: 20px 10px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid #2a2e37;}
+.sensor-box h3 { font-size: 26px; margin: 12px 0 5px 0; color: #f8fafc; justify-content:center;}
+.sensor-box small { color: #94a3b8; font-size: 13px; font-weight: 500;}
+
+.device-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #2a2e37; }
+.device-row:last-child { border-bottom: none; padding-bottom: 0; }
+.device-info { display: flex; flex-direction: column; }
+.device-name { font-size: 16px; font-weight: 500; color: #e2e8f0; }
+.timer-label { font-size: 12px; color: #10b981; margin-top: 4px; font-weight:600; min-height: 15px;}
+
+.timer-select { background: #0f1115; color: #94a3b8; border: 1px solid #334155; border-radius: 8px; padding: 8px 10px; font-size: 13px; outline: none; margin-right: 10px; cursor:pointer;}
+.message { color: #ef4444; font-size: 14px; text-align: center; margin-top: 15px;}
+#dashboard { display: none; }
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <h2>⚡ SmartFan</h2>
+      <p>Kamar Pribadi IoT</p>
+    </div>
+    <div id="logoutDiv" style="display:none;">
+      <button class="logout-btn" onclick="logout()" title="Logout">
+        <svg viewBox="0 0 24 24">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- HALAMAN LOGIN -->
+  <div id="loginPage" class="card">
+    <h3 style="justify-content:center; color:#0ea5e9;">🔐 Login EMQX Broker</h3>
+    <form id="loginForm">
+      <input id="username" type="text" placeholder="Username EMQX" required>
+      <input id="password" type="password" placeholder="Password EMQX" required>
+      <button class="blue full" style="margin-top:10px;" type="submit">HUBUNGKAN</button>
+    </form>
+    <p id="loginMessage" class="message"></p>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard">
+
+    <!-- SENSOR -->
+    <div class="sensor">
+      <div class="sensor-box">
+        <div style="font-size:32px">🌡️</div>
+        <h3 id="suhu">0.0°</h3>
+        <small>Suhu</small>
+      </div>
+      <div class="sensor-box">
+        <div style="font-size:32px">💧</div>
+        <h3 id="kelembapan">0.0%</h3>
+        <small>Kelembapan</small>
+      </div>
+    </div>
+
+    <!-- PINTU -->
+    <div class="card">
+      <h3>🚪 Pintu Utama</h3>
+      <button id="btnPintu" class="off full" onclick="togglePintu()" style="padding:16px;">BUKA PINTU</button>
+      <div style="text-align:center; margin-top:12px;">
+        <span id="statusPintu" style="color:#ef4444; font-size:13px; font-weight:600;">Terkunci Aman</span>
+      </div>
+    </div>
+
+    <!-- RELAY & TIMER -->
+    <div class="card">
+      <h3>🎛️ Kontrol & Timer</h3>
+      
+      <div class="device-row">
+        <div class="device-info">
+          <span class="device-name">💡 Lampu</span>
+          <span id="infoR1" class="timer-label"></span>
+        </div>
+        <div style="display:flex; align-items:center;">
+          <select id="selR1" class="timer-select">
+            <option value="0">Manual</option><option value="30">30 Menit</option><option value="60">1 Jam</option><option value="120">2 Jam</option>
+          </select>
+          <button id="btnR1" class="off" style="width:70px; padding:10px;" onclick="toggleRelay(1)">Mati</button>
+        </div>
+      </div>
+
+      <div class="device-row">
+        <div class="device-info">
+          <span class="device-name">🌀 Kipas</span>
+          <span id="infoR2" class="timer-label"></span>
+        </div>
+        <div style="display:flex; align-items:center;">
+          <select id="selR2" class="timer-select">
+            <option value="0">Manual</option><option value="30">30 Menit</option><option value="60">1 Jam</option><option value="120">2 Jam</option><option value="240">4 Jam</option>
+          </select>
+          <button id="btnR2" class="off" style="width:70px; padding:10px;" onclick="toggleRelay(2)">Mati</button>
+        </div>
+      </div>
+
+      <div class="device-row">
+        <div class="device-info">
+          <span class="device-name">🔌 Stopkontak</span>
+          <span id="infoR3" class="timer-label"></span>
+        </div>
+        <div style="display:flex; align-items:center;">
+          <select id="selR3" class="timer-select">
+            <option value="0">Manual</option><option value="30">30 Menit</option><option value="60">1 Jam</option><option value="120">2 Jam</option>
+          </select>
+          <button id="btnR3" class="off" style="width:70px; padding:10px;" onclick="toggleRelay(3)">Mati</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+const MQTT_HOST = "wss://bf7ee864.ala.asia-southeast1.emqxsl.com:8084/mqtt";
+const TOPIC_STATE = "smartfan/state";
+const TOPIC_CMD = "smartfan/cmd";
+
+let client = null;
+
+function updateButton(id, state, timerLabelId, timeLeft) {
+  const btn = document.getElementById(id);
+  const lbl = document.getElementById(timerLabelId);
+  btn.textContent = state ? "Hidup" : "Mati";
+  btn.className = state ? "on" : "off";
+  
+  if (state && timeLeft > 0) { lbl.textContent = "⏱️ Mati dalam " + timeLeft + "m"; } 
+  else { lbl.textContent = ""; }
+}
+
+function updateDashboard(data) {
+  updateButton("btnR1", data.r1, "infoR1", data.tR1);
+  updateButton("btnR2", data.r2, "infoR2", data.tR2);
+  updateButton("btnR3", data.r3, "infoR3", data.tR3);
+
+  const pintu = document.getElementById("btnPintu");
+  const statPintu = document.getElementById("statusPintu");
+  if (data.pintu) {
+    pintu.textContent = "KUNCI PINTU"; pintu.className = "on full";
+    statPintu.textContent = "Terbuka (Bisa digeser)"; statPintu.style.color = "#10b981";
+  } else {
+    pintu.textContent = "BUKA PINTU"; pintu.className = "off full";
+    statPintu.textContent = "Terkunci Aman"; statPintu.style.color = "#ef4444";
+  }
+
+  document.getElementById("suhu").textContent = data.suhu + "°";
+  document.getElementById("kelembapan").textContent = data.kelembapan + "%";
+}
+
+document.getElementById("loginForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  const u = document.getElementById("username").value;
+  const p = document.getElementById("password").value;
+  const msg = document.getElementById("loginMessage");
+  
+  msg.textContent = "Menghubungkan ke EMQX...";
+  
+  const options = {
+    clientId: 'WebDashboard_' + Math.random().toString(16).substr(2, 8),
+    username: u,
+    password: p,
+    clean: true
+  };
+
+  client = mqtt.connect(MQTT_HOST, options);
+
+  client.on('connect', function () {
+    msg.textContent = "";
+    document.getElementById("loginPage").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    document.getElementById("logoutDiv").style.display = "block";
+    
+    client.subscribe(TOPIC_STATE);
+    client.publish(TOPIC_CMD, "GET_STATUS");
+  });
+
+  client.on('message', function (topic, message) {
+    if (topic === TOPIC_STATE) {
+      try {
+        const data = JSON.parse(message.toString());
+        updateDashboard(data);
+      } catch(e) {}
+    }
+  });
+
+  client.on('error', function (err) {
+    msg.textContent = "Gagal terhubung! Periksa username/password EMQX.";
+    client.end();
+  });
+});
+
+function toggleRelay(n) {
+  if (!client) return;
+  const t = document.getElementById("selR" + n).value;
+  client.publish(TOPIC_CMD, "R" + n + ":" + t);
+}
+
+function togglePintu() {
+  if (!client) return;
+  client.publish(TOPIC_CMD, "TOGGLE_PINTU");
+}
+
+function logout() {
+  if (client) client.end();
+  document.getElementById("loginPage").style.display = "block";
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("logoutDiv").style.display = "none";
+}
+</script>
+</body>
+</html>
