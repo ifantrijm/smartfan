@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Smart Room IoT</title>
-<!-- Pustaka MQTT.js via CDN -->
+<!-- Pustaka MQTT.js (Library Gauges sudah dibuang!) -->
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <style>
 * { box-sizing: border-box; }
@@ -31,20 +31,57 @@ button:active { transform: scale(0.97); }
 .logout-btn { background: #ef4444; padding: 10px 14px; border-radius: 10px; display: flex; align-items: center; gap:6px; font-size:13px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); }
 .logout-btn svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 
+/* =========================================
+   DESAIN PURE CSS GAUGE (SUPER RINGAN)
+   ========================================= */
 .sensor { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-.sensor-box { text-align: center; background: #1e222a; padding: 20px 10px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid #2a2e37;}
-.sensor-box h3 { font-size: 26px; margin: 12px 0 5px 0; color: #f8fafc; justify-content:center;}
-.sensor-box small { color: #94a3b8; font-size: 13px; font-weight: 500;}
+.sensor-box { display:flex; flex-direction:column; align-items:center; justify-content:center; background: #1e222a; padding: 25px 10px 15px 10px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid #2a2e37;}
+.sensor-box small { color: #94a3b8; font-size: 14px; font-weight: 600; margin-top: 15px;}
 
+.gauge-wrapper {
+    position: relative;
+    width: 140px;
+    height: 70px; /* Setengah lingkaran */
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+.gauge-bg, .gauge-fill {
+    position: absolute;
+    top: 0; left: 0;
+    width: 140px; height: 140px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 16px solid #334155;
+    border-bottom-color: transparent !important;
+    border-left-color: transparent !important;
+}
+.gauge-bg { transform: rotate(-45deg); }
+.gauge-fill {
+    /* Animasi pergerakan jarum mulus */
+    transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.gauge-val {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 24px;
+    font-weight: 700;
+    color: #f8fafc;
+    line-height: 1;
+}
+
+/* Row Devices */
 .device-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #2a2e37; }
 .device-row:last-child { border-bottom: none; padding-bottom: 0; }
 .device-info { display: flex; flex-direction: column; }
 .device-name { font-size: 16px; font-weight: 500; color: #e2e8f0; }
 .timer-label { font-size: 12px; color: #10b981; margin-top: 4px; font-weight:600; min-height: 15px;}
-
 .timer-select { background: #0f1115; color: #94a3b8; border: 1px solid #334155; border-radius: 8px; padding: 8px 10px; font-size: 13px; outline: none; margin-right: 10px; cursor:pointer;}
 .message { color: #ef4444; font-size: 14px; text-align: center; margin-top: 15px;}
-#dashboard { display: none; }
+#dashboard, #loginPage, #logoutDiv { display: none; }
 </style>
 </head>
 
@@ -55,9 +92,9 @@ button:active { transform: scale(0.97); }
   <div class="header">
     <div>
       <h2>⚡ SmartFan</h2>
-      <p>Kamar Pribadi IoT</p>
+      <p>Solusi Mager</p>
     </div>
-    <div id="logoutDiv" style="display:none;">
+    <div id="logoutDiv">
       <button class="logout-btn" onclick="logout()" title="Logout">
         <svg viewBox="0 0 24 24">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -70,10 +107,10 @@ button:active { transform: scale(0.97); }
 
   <!-- HALAMAN LOGIN -->
   <div id="loginPage" class="card">
-    <h3 style="justify-content:center; color:#0ea5e9;">🔐 Login EMQX Broker</h3>
+    <h3 style="justify-content:center; color:#0ea5e9;">🔐 Login SmartFan</h3>
     <form id="loginForm">
-      <input id="username" type="text" placeholder="Username EMQX" required>
-      <input id="password" type="password" placeholder="Password EMQX" required>
+      <input id="username" type="text" placeholder="Username" required>
+      <input id="password" type="password" placeholder="Password" required>
       <button class="blue full" style="margin-top:10px;" type="submit">HUBUNGKAN</button>
     </form>
     <p id="loginMessage" class="message"></p>
@@ -82,18 +119,28 @@ button:active { transform: scale(0.97); }
   <!-- DASHBOARD -->
   <div id="dashboard">
 
-    <!-- SENSOR -->
+    <!-- SENSOR CSS (ANTI BUG) -->
     <div class="sensor">
+      
       <div class="sensor-box">
-        <div style="font-size:32px">🌡️</div>
-        <h3 id="suhu">0.0°</h3>
+        <div class="gauge-wrapper">
+          <div class="gauge-bg"></div>
+          <!-- Titik 0 derajat adalah -225deg -->
+          <div id="barSuhu" class="gauge-fill" style="border-color: #eab308; transform: rotate(-225deg);"></div>
+          <div id="valSuhu" class="gauge-val">0.0°</div>
+        </div>
         <small>Suhu</small>
       </div>
+
       <div class="sensor-box">
-        <div style="font-size:32px">💧</div>
-        <h3 id="kelembapan">0.0%</h3>
+        <div class="gauge-wrapper">
+          <div class="gauge-bg"></div>
+          <div id="barKelembapan" class="gauge-fill" style="border-color: #f97316; transform: rotate(-225deg);"></div>
+          <div id="valKelembapan" class="gauge-val">0.0%</div>
+        </div>
         <small>Kelembapan</small>
       </div>
+
     </div>
 
     <!-- PINTU -->
@@ -154,12 +201,20 @@ button:active { transform: scale(0.97); }
 </div>
 
 <script>
+// ==========================================
+// 1. KONFIGURASI MQTT & STORAGE
+// ==========================================
 const MQTT_HOST = "wss://bf7ee864.ala.asia-southeast1.emqxsl.com:8084/mqtt";
 const TOPIC_STATE = "smartfan/state";
 const TOPIC_CMD = "smartfan/cmd";
+const STORAGE_USER = "emqx_user";
+const STORAGE_PASS = "emqx_pass";
 
 let client = null;
 
+// ==========================================
+// 2. FUNGSI UI & LOGIKA ANIMASI CSS
+// ==========================================
 function updateButton(id, state, timerLabelId, timeLeft) {
   const btn = document.getElementById(id);
   const lbl = document.getElementById(timerLabelId);
@@ -185,29 +240,39 @@ function updateDashboard(data) {
     statPintu.textContent = "Terkunci Aman"; statPintu.style.color = "#ef4444";
   }
 
-  document.getElementById("suhu").textContent = data.suhu + "°";
-  document.getElementById("kelembapan").textContent = data.kelembapan + "%";
+  // Animasi Suhu (Range 0 - 50 Celcius)
+  if(data.suhu !== undefined) {
+     let persentaseSuhu = data.suhu / 50;
+     if(persentaseSuhu > 1) persentaseSuhu = 1;
+     // Konversi persen ke derajat rotasi (-225 sampai -45)
+     let derajatSuhu = -225 + (persentaseSuhu * 180);
+     document.getElementById("barSuhu").style.transform = `rotate(${derajatSuhu}deg)`;
+     document.getElementById("valSuhu").textContent = data.suhu + "°";
+  }
+  
+  // Animasi Kelembapan (Range 0 - 100 Persen)
+  if(data.kelembapan !== undefined) {
+     let persentaseLembap = data.kelembapan / 100;
+     if(persentaseLembap > 1) persentaseLembap = 1;
+     let derajatLembap = -225 + (persentaseLembap * 180);
+     document.getElementById("barKelembapan").style.transform = `rotate(${derajatLembap}deg)`;
+     document.getElementById("valKelembapan").textContent = data.kelembapan + "%";
+  }
 }
 
-document.getElementById("loginForm").addEventListener("submit", function(e) {
-  e.preventDefault();
-  const u = document.getElementById("username").value;
-  const p = document.getElementById("password").value;
-  const msg = document.getElementById("loginMessage");
+function connectMQTT(u, p) {
+  if (client) client.end();
   
-  msg.textContent = "Menghubungkan ke EMQX...";
-  
-  const options = {
+  client = mqtt.connect(MQTT_HOST, {
     clientId: 'WebDashboard_' + Math.random().toString(16).substr(2, 8),
-    username: u,
-    password: p,
-    clean: true
-  };
-
-  client = mqtt.connect(MQTT_HOST, options);
+    username: u, password: p, clean: true
+  });
 
   client.on('connect', function () {
-    msg.textContent = "";
+    localStorage.setItem(STORAGE_USER, u);
+    localStorage.setItem(STORAGE_PASS, p);
+    
+    document.getElementById("loginMessage").textContent = "";
     document.getElementById("loginPage").style.display = "none";
     document.getElementById("dashboard").style.display = "block";
     document.getElementById("logoutDiv").style.display = "block";
@@ -226,9 +291,29 @@ document.getElementById("loginForm").addEventListener("submit", function(e) {
   });
 
   client.on('error', function (err) {
-    msg.textContent = "Gagal terhubung! Periksa username/password EMQX.";
-    client.end();
+    document.getElementById("loginMessage").textContent = "Gagal terhubung! Periksa koneksi atau kredensial EMQX.";
+    logout();
   });
+}
+
+function initApp() {
+  const savedUser = localStorage.getItem(STORAGE_USER);
+  const savedPass = localStorage.getItem(STORAGE_PASS);
+  
+  if (savedUser && savedPass) {
+    document.getElementById("loginPage").style.display = "none";
+    connectMQTT(savedUser, savedPass);
+  } else {
+    document.getElementById("loginPage").style.display = "block";
+  }
+}
+
+document.getElementById("loginForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  const u = document.getElementById("username").value;
+  const p = document.getElementById("password").value;
+  document.getElementById("loginMessage").textContent = "Menghubungkan ke EMQX...";
+  connectMQTT(u, p);
 });
 
 function toggleRelay(n) {
@@ -243,11 +328,19 @@ function togglePintu() {
 }
 
 function logout() {
+  localStorage.removeItem(STORAGE_USER);
+  localStorage.removeItem(STORAGE_PASS);
+  
   if (client) client.end();
+  
+  document.getElementById("username").value = "";
+  document.getElementById("password").value = "";
   document.getElementById("loginPage").style.display = "block";
   document.getElementById("dashboard").style.display = "none";
   document.getElementById("logoutDiv").style.display = "none";
 }
+
+window.onload = initApp;
 </script>
 </body>
 </html>
