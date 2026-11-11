@@ -4,19 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Smart Room IoT</title>
-<!-- Pustaka MQTT.js -->
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <style>
 * { box-sizing: border-box; }
 body { margin: 0; padding: 15px; background: #0f1115; color: #e2e8f0; font-family: 'Segoe UI', Arial, sans-serif; }
 .container { max-width: 500px; margin: auto; }
 
-.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 0 5px; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 5px; }
 .header h2 { margin: 0; font-size: 24px; color: #0ea5e9; font-weight: 700; letter-spacing: 0.5px; }
 .header p { margin: 2px 0 0 0; color: #64748b; font-size: 13px; }
 
 .card { background: #1e222a; padding: 20px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid #2a2e37; }
 .card h3 { margin: 0 0 20px 0; font-size: 18px; color: #f8fafc; font-weight: 600; display:flex; align-items:center; gap:8px;}
+
+/* WIDGET CUACA & SHOLAT */
+.info-widget { display: flex; gap: 12px; margin-bottom: 20px; }
+.widget-box { flex: 1; background: #1e222a; border-radius: 16px; padding: 15px 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.2); border: 1px solid #2a2e37; }
+.widget-icon { font-size: 28px; line-height: 1; }
+.widget-val { font-size: 15px; color: #f8fafc; font-weight: 700; margin-bottom: 2px; }
+.widget-desc { font-size: 12px; color: #94a3b8; font-weight: 500; }
 
 input { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #334155; background: #0f1115; color: white; border-radius: 12px; font-size: 15px; }
 input:focus { outline: none; border-color: #0ea5e9; }
@@ -31,48 +37,17 @@ button:active { transform: scale(0.97); }
 .logout-btn { background: #ef4444; padding: 10px 14px; border-radius: 10px; display: flex; align-items: center; gap:6px; font-size:13px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); }
 .logout-btn svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 
-/* =========================================
-   DESAIN PURE CSS GAUGE (SUPER RINGAN)
-   ========================================= */
+/* SENSOR GAUGE */
 .sensor { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
 .sensor-box { display:flex; flex-direction:column; align-items:center; justify-content:center; background: #1e222a; padding: 25px 10px 15px 10px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid #2a2e37;}
 .sensor-box small { color: #94a3b8; font-size: 14px; font-weight: 600; margin-top: 15px;}
-
-.gauge-wrapper {
-    position: relative;
-    width: 140px;
-    height: 70px;
-    overflow: hidden;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-}
-.gauge-bg, .gauge-fill {
-    position: absolute;
-    top: 0; left: 0;
-    width: 140px; height: 140px;
-    box-sizing: border-box;
-    border-radius: 50%;
-    border: 16px solid #334155;
-    border-bottom-color: transparent !important;
-    border-left-color: transparent !important;
-}
+.gauge-wrapper { position: relative; width: 140px; height: 70px; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
+.gauge-bg, .gauge-fill { position: absolute; top: 0; left: 0; width: 140px; height: 140px; box-sizing: border-box; border-radius: 50%; border: 16px solid #334155; border-bottom-color: transparent !important; border-left-color: transparent !important; }
 .gauge-bg { transform: rotate(-45deg); }
-.gauge-fill {
-    transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.gauge-val {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    text-align: center;
-    font-size: 24px;
-    font-weight: 700;
-    color: #f8fafc;
-    line-height: 1;
-}
+.gauge-fill { transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1); }
+.gauge-val { position: absolute; bottom: 0; width: 100%; text-align: center; font-size: 24px; font-weight: 700; color: #f8fafc; line-height: 1; }
 
-/* Row Devices */
+/* ROW DEVICES */
 .device-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #2a2e37; }
 .device-row:last-child { border-bottom: none; padding-bottom: 0; }
 .device-info { display: flex; flex-direction: column; }
@@ -118,9 +93,26 @@ button:active { transform: scale(0.97); }
   <!-- DASHBOARD -->
   <div id="dashboard">
 
-    <!-- SENSOR CSS (ANTI BUG & RINGAN) -->
+    <!-- WIDGET CUACA & SHOLAT (UI BARU) -->
+    <div class="info-widget">
+      <div class="widget-box">
+        <span id="w-icon" class="widget-icon">☁️</span>
+        <div>
+          <div id="w-temp" class="widget-val">--°C</div>
+          <div id="w-desc" class="widget-desc">Memuat cuaca...</div>
+        </div>
+      </div>
+      <div class="widget-box">
+        <span class="widget-icon">🕌</span>
+        <div>
+          <div id="p-next" class="widget-val">Sholat</div>
+          <div id="p-time" class="widget-desc">Memuat...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SENSOR CSS -->
     <div class="sensor">
-      
       <div class="sensor-box">
         <div class="gauge-wrapper">
           <div class="gauge-bg"></div>
@@ -129,7 +121,6 @@ button:active { transform: scale(0.97); }
         </div>
         <small>Suhu</small>
       </div>
-
       <div class="sensor-box">
         <div class="gauge-wrapper">
           <div class="gauge-bg"></div>
@@ -138,7 +129,6 @@ button:active { transform: scale(0.97); }
         </div>
         <small>Kelembapan</small>
       </div>
-
     </div>
 
     <!-- PINTU -->
@@ -154,18 +144,18 @@ button:active { transform: scale(0.97); }
     <div class="card">
       <h3>🎛️ Kontrol & Timer</h3>
 
-      <!-- MODE SLEEP -->
       <button class="blue full" onclick="modeSleep()" style="margin-bottom: 15px; background: #6366f1;">
         🌙 MODE SLEEP (Good Night)
       </button>
       
+      <!-- PERBAIKAN TIMER: Tambah onchange="updateTimerLangsung(n)" -->
       <div class="device-row">
         <div class="device-info">
           <span class="device-name">💡 Lampu</span>
           <span id="infoR1" class="timer-label"></span>
         </div>
         <div style="display:flex; align-items:center;">
-          <select id="selR1" class="timer-select">
+          <select id="selR1" class="timer-select" onchange="updateTimerLangsung(1)">
             <option value="0">Manual</option><option value="30">30 Menit</option><option value="60">1 Jam</option><option value="120">2 Jam</option>
           </select>
           <button id="btnR1" class="off" style="width:70px; padding:10px;" onclick="toggleRelay(1)">Mati</button>
@@ -178,7 +168,7 @@ button:active { transform: scale(0.97); }
           <span id="infoR2" class="timer-label"></span>
         </div>
         <div style="display:flex; align-items:center;">
-          <select id="selR2" class="timer-select">
+          <select id="selR2" class="timer-select" onchange="updateTimerLangsung(2)">
             <option value="0">Manual</option><option value="30">30 Menit</option><option value="60">1 Jam</option><option value="120">2 Jam</option><option value="240">4 Jam</option>
           </select>
           <button id="btnR2" class="off" style="width:70px; padding:10px;" onclick="toggleRelay(2)">Mati</button>
@@ -191,7 +181,7 @@ button:active { transform: scale(0.97); }
           <span id="infoR3" class="timer-label"></span>
         </div>
         <div style="display:flex; align-items:center;">
-          <select id="selR3" class="timer-select">
+          <select id="selR3" class="timer-select" onchange="updateTimerLangsung(3)">
             <option value="0">Manual</option><option value="30">30 Menit</option><option value="60">1 Jam</option><option value="120">2 Jam</option>
           </select>
           <button id="btnR3" class="off" style="width:70px; padding:10px;" onclick="toggleRelay(3)">Mati</button>
@@ -217,14 +207,13 @@ let client = null;
 let curR1 = false, curR2 = false, curR3 = false, curPintu = false;
 
 // ==========================================
-// 2. FUNGSI UI & LOGIKA ANIMASI CSS
+// 2. LOGIKA UI & MQTT
 // ==========================================
 function updateButton(id, state, timerLabelId, timeLeft) {
   const btn = document.getElementById(id);
   const lbl = document.getElementById(timerLabelId);
   btn.textContent = state ? "Hidup" : "Mati";
   btn.className = state ? "on" : "off";
-  
   if (state && timeLeft > 0) { lbl.textContent = "⏱️ Mati dalam " + timeLeft + "m"; } 
   else { lbl.textContent = ""; }
 }
@@ -249,7 +238,6 @@ function updateDashboard(data) {
     statPintu.textContent = "Terkunci Aman"; statPintu.style.color = "#ef4444";
   }
 
-  // Animasi Suhu
   if(data.suhu !== undefined) {
      let persentaseSuhu = data.suhu / 50;
      if(persentaseSuhu > 1) persentaseSuhu = 1;
@@ -258,7 +246,6 @@ function updateDashboard(data) {
      document.getElementById("valSuhu").textContent = data.suhu + "°";
   }
   
-  // Animasi Kelembapan
   if(data.kelembapan !== undefined) {
      let persentaseLembap = data.kelembapan / 100;
      if(persentaseLembap > 1) persentaseLembap = 1;
@@ -268,33 +255,66 @@ function updateDashboard(data) {
   }
 }
 
+// LOGIKA TIMER BARU (INSTANT UPDATE)
+function updateTimerLangsung(n) {
+  if (!client) return;
+  const t = document.getElementById("selR" + n).value;
+  let isOn = (n===1 ? curR1 : (n===2 ? curR2 : curR3));
+  
+  // Jika perangkat sedang NYALA, langsung kirim perintah update timer ke ESP32
+  if (isOn) {
+    client.publish(TOPIC_CMD, "R" + n + ":" + t);
+  }
+}
+
+function toggleRelay(n) {
+  if (!client) return;
+  const t = document.getElementById("selR" + n).value;
+  let isOn = (n===1 ? curR1 : (n===2 ? curR2 : curR3));
+
+  if (isOn) {
+    // Jika posisi NYALA dan tombol ditekan, maka matikan (Kirim R:0)
+    client.publish(TOPIC_CMD, "R" + n + ":0");
+  } else {
+    // Jika posisi MATI, nyalakan sesuai pilihan timer di dropdown
+    client.publish(TOPIC_CMD, "R" + n + ":" + t);
+  }
+}
+
+function togglePintu() {
+  if (!client) return;
+  client.publish(TOPIC_CMD, "TOGGLE_PINTU");
+}
+
+function modeSleep() {
+  if (!client) return;
+  let jeda = 0;
+  if (curR1) { setTimeout(() => { client.publish(TOPIC_CMD, "R1:0"); }, jeda); jeda += 300; }
+  if (curPintu) { setTimeout(() => { client.publish(TOPIC_CMD, "TOGGLE_PINTU"); }, jeda); jeda += 300; }
+  if (!curR2) { setTimeout(() => { client.publish(TOPIC_CMD, "R2:120"); }, jeda); }
+}
+
 function connectMQTT(u, p) {
   if (client) client.end();
-  
-  client = mqtt.connect(MQTT_HOST, {
-    clientId: 'WebDashboard_' + Math.random().toString(16).substr(2, 8),
-    username: u, password: p, clean: true
-  });
+  client = mqtt.connect(MQTT_HOST, { clientId: 'WebDashboard_' + Math.random().toString(16).substr(2, 8), username: u, password: p, clean: true });
 
   client.on('connect', function () {
     localStorage.setItem(STORAGE_USER, u);
     localStorage.setItem(STORAGE_PASS, p);
-    
     document.getElementById("loginMessage").textContent = "";
     document.getElementById("loginPage").style.display = "none";
     document.getElementById("dashboard").style.display = "block";
     document.getElementById("logoutDiv").style.display = "block";
-    
     client.subscribe(TOPIC_STATE);
     client.publish(TOPIC_CMD, "GET_STATUS");
+    
+    // Muat Widget saat berhasil login
+    loadWidgets();
   });
 
   client.on('message', function (topic, message) {
     if (topic === TOPIC_STATE) {
-      try {
-        const data = JSON.parse(message.toString());
-        updateDashboard(data);
-      } catch(e) {}
+      try { updateDashboard(JSON.parse(message.toString())); } catch(e) {}
     }
   });
 
@@ -304,73 +324,79 @@ function connectMQTT(u, p) {
   });
 }
 
+function logout() {
+  localStorage.removeItem(STORAGE_USER); localStorage.removeItem(STORAGE_PASS);
+  if (client) client.end();
+  document.getElementById("username").value = ""; document.getElementById("password").value = "";
+  document.getElementById("loginPage").style.display = "block"; document.getElementById("dashboard").style.display = "none"; document.getElementById("logoutDiv").style.display = "none";
+}
+
+document.getElementById("loginForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  document.getElementById("loginMessage").textContent = "Menghubungkan ke EMQX...";
+  connectMQTT(document.getElementById("username").value, document.getElementById("password").value);
+});
+
+// ==========================================
+// 3. FITUR WIDGET CUACA & SHOLAT (JEMBER)
+// ==========================================
+async function loadWidgets() {
+  try {
+    // FETCH CUACA (Open-Meteo) Jember: Lat -8.17, Lon 113.70
+    const wRes = await fetch("https://api.open-meteo.com/v1/forecast?latitude=-8.1724&longitude=113.7000&current_weather=true");
+    const wData = await wRes.json();
+    document.getElementById("w-temp").textContent = Math.round(wData.current_weather.temperature) + "°C";
+    
+    // Mapping Icon Cuaca
+    const code = wData.current_weather.weathercode;
+    let icon = "🌤️", desc = "Cerah Berawan";
+    if(code === 0) { icon = "☀️"; desc = "Cerah"; }
+    else if(code <= 3) { icon = "⛅"; desc = "Berawan"; }
+    else if(code <= 67) { icon = "🌧️"; desc = "Hujan"; }
+    else if(code <= 99) { icon = "⛈️"; desc = "Badai Hujan"; }
+    document.getElementById("w-icon").textContent = icon;
+    document.getElementById("w-desc").textContent = desc;
+
+    // FETCH JADWAL SHOLAT (Aladhan API) Jember
+    const pRes = await fetch("https://api.aladhan.com/v1/timingsByCity?city=Jember&country=Indonesia&method=11");
+    const pData = await pRes.json();
+    const timings = pData.data.timings;
+    
+    // Cari waktu sholat terdekat
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    const prayers = [
+      { name: 'Subuh', time: timings.Fajr }, { name: 'Dzuhur', time: timings.Dhuhr },
+      { name: 'Ashar', time: timings.Asr }, { name: 'Maghrib', time: timings.Maghrib }, { name: 'Isya', time: timings.Isha }
+    ];
+    
+    let nextPrayer = prayers[0]; // Default besok subuh
+    for(let p of prayers) {
+      let [h, m] = p.time.split(':');
+      let pTime = parseInt(h)*60 + parseInt(m);
+      if(pTime > currentTime) {
+        nextPrayer = p;
+        break;
+      }
+    }
+    
+    document.getElementById("p-next").textContent = nextPrayer.name;
+    document.getElementById("p-time").textContent = nextPrayer.time + " WIB";
+
+  } catch(e) {
+    console.log("Widget error:", e);
+  }
+}
+
 function initApp() {
   const savedUser = localStorage.getItem(STORAGE_USER);
   const savedPass = localStorage.getItem(STORAGE_PASS);
-  
   if (savedUser && savedPass) {
     document.getElementById("loginPage").style.display = "none";
     connectMQTT(savedUser, savedPass);
   } else {
     document.getElementById("loginPage").style.display = "block";
   }
-}
-
-document.getElementById("loginForm").addEventListener("submit", function(e) {
-  e.preventDefault();
-  const u = document.getElementById("username").value;
-  const p = document.getElementById("password").value;
-  document.getElementById("loginMessage").textContent = "Menghubungkan ke EMQX...";
-  connectMQTT(u, p);
-});
-
-function toggleRelay(n) {
-  if (!client) return;
-  const t = document.getElementById("selR" + n).value;
-  client.publish(TOPIC_CMD, "R" + n + ":" + t);
-}
-
-function togglePintu() {
-  if (!client) return;
-  client.publish(TOPIC_CMD, "TOGGLE_PINTU");
-}
-
-function logout() {
-  localStorage.removeItem(STORAGE_USER);
-  localStorage.removeItem(STORAGE_PASS);
-  
-  if (client) client.end();
-  
-  document.getElementById("username").value = "";
-  document.getElementById("password").value = "";
-  document.getElementById("loginPage").style.display = "block";
-  document.getElementById("dashboard").style.display = "none";
-  document.getElementById("logoutDiv").style.display = "none";
-}
-
-function modeSleep() {
-  if (!client) return;
-  
-  let jeda = 0;
-
-  // 1. Matikan Lampu (R1) jika menyala
-  if (curR1) {
-    setTimeout(() => { client.publish(TOPIC_CMD, "R1:0"); }, jeda);
-    jeda += 300;
-  }
-  
-  // 2. Kunci Pintu jika terbuka
-  if (curPintu) {
-    setTimeout(() => { client.publish(TOPIC_CMD, "TOGGLE_PINTU"); }, jeda);
-    jeda += 300;
-  }
-  
-  // 3. Nyalakan Kipas (R2) timer 4 jam jika mati
-  if (!curR2) {
-    setTimeout(() => { client.publish(TOPIC_CMD, "R2:120"); }, jeda);
-  }
-  
-  // Stopkontak (R3) sengaja dilewati agar tetap menyala
 }
 
 window.onload = initApp;
