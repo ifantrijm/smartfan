@@ -129,6 +129,10 @@ button:active { transform: scale(0.97); }
         </div>
         <small>Kelembapan</small>
       </div>
+
+      <div id="statusKenyamanan" style="grid-column: span 2; text-align: center; background: #2a2e37; padding: 12px; border-radius: 12px; font-weight: 600; color: #0ea5e9; font-size: 14px; margin-top: 5px;">
+      🤖 Memantau kenyamanan kamar...
+    </div>
     </div>
 
     <!-- PINTU -->
@@ -145,7 +149,7 @@ button:active { transform: scale(0.97); }
       <h3>🎛️ Kontrol & Timer</h3>
 
       <button class="blue full" onclick="modeSleep()" style="margin-bottom: 15px; background: #6366f1;">
-        🌙 MODE SLEEP (Good Night)
+        🌙 Mode Tewas
       </button>
       
       <!-- PERBAIKAN TIMER: Tambah onchange="updateTimerLangsung(n)" -->
@@ -253,6 +257,52 @@ function updateDashboard(data) {
      document.getElementById("barKelembapan").style.transform = `rotate(${derajatLembap}deg)`;
      document.getElementById("valKelembapan").textContent = data.kelembapan + "%";
   }
+
+// =====================================
+  // LOGIKA CLUSTER KENYAMANAN (HEAT INDEX)
+  // =====================================
+  if(data.suhu !== undefined && data.kelembapan !== undefined) {
+     let t = data.suhu;
+     let h = data.kelembapan;
+     let teksKenyamanan = "";
+     let warnaTeks = "";
+
+     // Cluster 1: Suhu Dingin/Sejuk (AC menyala / Malam hujan)
+     if (t < 24) {
+       teksKenyamanan = "🥶 Sejuk & Dingin";
+       warnaTeks = "#0ea5e9"; // Biru
+     } 
+     // Cluster 2: Suhu Normal / Ideal (24 - 27)
+     else if (t >= 24 && t <= 27) {
+       if (h >= 40 && h <= 65) {
+         teksKenyamanan = "😌 Sangat Nyaman & Ideal";
+         warnaTeks = "#10b981"; // Hijau
+       } else {
+         teksKenyamanan = "😐 Agak Lembap (Sumuk Ringan)";
+         warnaTeks = "#eab308"; // Kuning
+       }
+     } 
+     // Cluster 3: Suhu Hangat (28 - 30)
+     else if (t > 27 && t <= 30) {
+       if (h < 60) {
+         teksKenyamanan = "🤔 Cukup Hangat";
+         warnaTeks = "#eab308"; // Kuning
+       } else {
+         teksKenyamanan = "🥵 Gerah & Sumuk (Keringat Susah Kering)";
+         warnaTeks = "#f97316"; // Oranye
+       }
+     } 
+     // Cluster 4: Suhu Ekstrem (Panas Siang Bolong)
+     else {
+       teksKenyamanan = "🔥 Panas Banget! Wajib Nyalakan Kipas!";
+       warnaTeks = "#ef4444"; // Merah
+     }
+
+     // Tampilkan ke layar
+     const boxKenyamanan = document.getElementById("statusKenyamanan");
+     boxKenyamanan.textContent = teksKenyamanan;
+     boxKenyamanan.style.color = warnaTeks;
+  }  
 }
 
 // LOGIKA TIMER BARU (INSTANT UPDATE)
