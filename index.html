@@ -340,29 +340,54 @@ document.getElementById("loginForm").addEventListener("submit", function(e) {
 // ==========================================
 // 3. FITUR WIDGET CUACA & SHOLAT (JEMBER)
 // ==========================================
+// ==========================================
+// 3. WIDGET CUACA & SHOLAT (VERSI CACHE SUPER CEPAT)
+// ==========================================
 async function loadWidgets() {
   try {
-    // FETCH CUACA (Open-Meteo) Jember: Lat -8.17, Lon 113.70
-    const wRes = await fetch("https://api.open-meteo.com/v1/forecast?latitude=-8.1724&longitude=113.7000&current_weather=true");
-    const wData = await wRes.json();
-    document.getElementById("w-temp").textContent = Math.round(wData.current_weather.temperature) + "°C";
+    const nowTime = new Date().getTime();
     
-    // Mapping Icon Cuaca
+    // 1. CEK CACHE CUACA (Update tiap 30 Menit)
+    let wDataStr = localStorage.getItem("weatherCache");
+    let wDataTime = localStorage.getItem("weatherTime");
+    let wData;
+    
+    // Jika belum ada cache ATAU cache sudah lebih tua dari 30 menit (1.800.000 ms), fetch baru!
+    if (!wDataStr || !wDataTime || (nowTime - wDataTime > 1800000)) {
+      const wRes = await fetch("https://api.open-meteo.com/v1/forecast?latitude=-8.1724&longitude=113.7000&current_weather=true");
+      wData = await wRes.json();
+      localStorage.setItem("weatherCache", JSON.stringify(wData));
+      localStorage.setItem("weatherTime", nowTime);
+    } else {
+      wData = JSON.parse(wDataStr); // Pakai data simpanan, instan!
+    }
+
+    document.getElementById("w-temp").textContent = Math.round(wData.current_weather.temperature) + "°C";
     const code = wData.current_weather.weathercode;
     let icon = "🌤️", desc = "Cerah Berawan";
     if(code === 0) { icon = "☀️"; desc = "Cerah"; }
     else if(code <= 3) { icon = "⛅"; desc = "Berawan"; }
     else if(code <= 67) { icon = "🌧️"; desc = "Hujan"; }
-    else if(code <= 99) { icon = "⛈️"; desc = "Badai Hujan"; }
+    else if(code <= 99) { icon = "⛈️"; desc = "Badai Petir"; }
     document.getElementById("w-icon").textContent = icon;
     document.getElementById("w-desc").textContent = desc;
 
-    // FETCH JADWAL SHOLAT (Aladhan API) Jember
-    const pRes = await fetch("https://api.aladhan.com/v1/timingsByCity?city=Jember&country=Indonesia&method=11");
-    const pData = await pRes.json();
-    const timings = pData.data.timings;
+    // 2. CEK CACHE SHOLAT (Update tiap 24 Jam)
+    let pDataStr = localStorage.getItem("prayerCache");
+    let pDataTime = localStorage.getItem("prayerTime");
+    let pData;
     
-    // Cari waktu sholat terdekat
+    // Sholat cukup di-update 1x sehari (86.400.000 ms)
+    if (!pDataStr || !pDataTime || (nowTime - pDataTime > 86400000)) {
+      const pRes = await fetch("https://api.aladhan.com/v1/timingsByCity?city=Jember&country=Indonesia&method=20");
+      pData = await pRes.json();
+      localStorage.setItem("prayerCache", JSON.stringify(pData));
+      localStorage.setItem("prayerTime", nowTime);
+    } else {
+      pData = JSON.parse(pDataStr);
+    }
+
+    const timings = pData.data.timings;
     const now = new Date();
     const currentTime = now.getHours() * 60 + now.getMinutes();
     const prayers = [
@@ -370,7 +395,7 @@ async function loadWidgets() {
       { name: 'Ashar', time: timings.Asr }, { name: 'Maghrib', time: timings.Maghrib }, { name: 'Isya', time: timings.Isha }
     ];
     
-    let nextPrayer = prayers[0]; // Default besok subuh
+    let nextPrayer = prayers[0];
     for(let p of prayers) {
       let [h, m] = p.time.split(':');
       let pTime = parseInt(h)*60 + parseInt(m);
@@ -384,7 +409,7 @@ async function loadWidgets() {
     document.getElementById("p-time").textContent = nextPrayer.time + " WIB";
 
   } catch(e) {
-    console.log("Widget error:", e);
+    console.log("Gagal memuat widget:", e);
   }
 }
 
