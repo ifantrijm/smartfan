@@ -13,9 +13,23 @@ body { margin: 0; padding: 15px; background: #0f1115; color: #e2e8f0; font-famil
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 5px; }
 .header h2 { margin: 0; font-size: 24px; color: #0ea5e9; font-weight: 700; letter-spacing: 0.5px; }
 .header p { margin: 2px 0 0 0; color: #64748b; font-size: 13px; }
+.header-actions { display: flex; align-items: center; gap: 10px; }
 
 .card { background: #1e222a; padding: 20px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid #2a2e37; }
 .card h3 { margin: 0 0 20px 0; font-size: 18px; color: #f8fafc; font-weight: 600; display:flex; align-items:center; gap:8px;}
+
+/* TOMBOL MIC & BANNER SUARA */
+.mic-btn { background: #1e222a; border: 1px solid #334155; padding: 10px 14px; border-radius: 10px; display: flex; align-items: center; gap: 6px; font-size: 13px; color: #38bdf8; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+.mic-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
+.mic-btn.listening { background: #ef4444; border-color: #ef4444; color: white; animation: pulseMic 1.2s infinite; }
+
+@keyframes pulseMic {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.voice-banner { display: none; background: #1e293b; border: 1px solid #0ea5e9; color: #e2e8f0; padding: 12px 15px; border-radius: 14px; margin-bottom: 16px; font-size: 13px; text-align: center; font-weight: 500; }
 
 /* WIDGET CUACA & SHOLAT */
 .info-widget { display: flex; gap: 12px; margin-bottom: 20px; }
@@ -69,13 +83,23 @@ button:active { transform: scale(0.97); }
       <p>Solusi Mager</p>
     </div>
     <div id="logoutDiv">
-      <button class="logout-btn" onclick="logout()" title="Logout">
-        <svg viewBox="0 0 24 24">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-          <polyline points="16 17 21 12 16 7"></polyline>
-          <line x1="21" y1="12" x2="9" y2="12"></line>
-        </svg>
-      </button>
+      <div class="header-actions">
+        <button id="btnMic" class="mic-btn" onclick="mulaiPerintahSuara()" title="Perintah Suara">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </button>
+        <button class="logout-btn" onclick="logout()" title="Logout">
+          <svg viewBox="0 0 24 24">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -93,7 +117,10 @@ button:active { transform: scale(0.97); }
   <!-- DASHBOARD -->
   <div id="dashboard">
 
-    <!-- WIDGET CUACA & SHOLAT (UI BARU) -->
+    <!-- BANNER FEEDBACK PERINTAH SUARA -->
+    <div id="voiceStatus" class="voice-banner"></div>
+
+    <!-- WIDGET CUACA & SHOLAT -->
     <div class="info-widget">
       <div class="widget-box">
         <span id="w-icon" class="widget-icon">☁️</span>
@@ -131,8 +158,8 @@ button:active { transform: scale(0.97); }
       </div>
 
       <div id="statusKenyamanan" style="grid-column: span 2; text-align: center; background: #2a2e37; padding: 12px; border-radius: 12px; font-weight: 600; color: #0ea5e9; font-size: 14px; margin-top: 5px;">
-      🤖 Memantau kenyamanan kamar...
-    </div>
+        🤖 Memantau kenyamanan kamar...
+      </div>
     </div>
 
     <!-- PINTU -->
@@ -152,7 +179,6 @@ button:active { transform: scale(0.97); }
         🌙 Mode Tewas
       </button>
       
-      <!-- PERBAIKAN TIMER: Tambah onchange="updateTimerLangsung(n)" -->
       <div class="device-row">
         <div class="device-info">
           <span class="device-name">💡 Lampu</span>
@@ -258,60 +284,50 @@ function updateDashboard(data) {
      document.getElementById("valKelembapan").textContent = data.kelembapan + "%";
   }
 
-// =====================================
   // LOGIKA CLUSTER KENYAMANAN (HEAT INDEX)
-  // =====================================
   if(data.suhu !== undefined && data.kelembapan !== undefined) {
      let t = data.suhu;
      let h = data.kelembapan;
      let teksKenyamanan = "";
      let warnaTeks = "";
 
-     // Cluster 1: Suhu Dingin/Sejuk (AC menyala / Malam hujan)
      if (t < 24) {
        teksKenyamanan = "🥶 Sejuk & Dingin";
-       warnaTeks = "#0ea5e9"; // Biru
+       warnaTeks = "#0ea5e9";
      } 
-     // Cluster 2: Suhu Normal / Ideal (24 - 27)
      else if (t >= 24 && t <= 27) {
        if (h >= 40 && h <= 65) {
          teksKenyamanan = "😌 Sangat Nyaman & Ideal";
-         warnaTeks = "#10b981"; // Hijau
+         warnaTeks = "#10b981";
        } else {
          teksKenyamanan = "😐 Agak Lembap (Sumuk Ringan)";
-         warnaTeks = "#eab308"; // Kuning
+         warnaTeks = "#eab308";
        }
      } 
-     // Cluster 3: Suhu Hangat (28 - 30)
      else if (t > 27 && t <= 30) {
        if (h < 60) {
          teksKenyamanan = "🤔 Cukup Hangat";
-         warnaTeks = "#eab308"; // Kuning
+         warnaTeks = "#eab308";
        } else {
          teksKenyamanan = "🥵 Gerah & Sumuk (Keringat Susah Kering)";
-         warnaTeks = "#f97316"; // Oranye
+         warnaTeks = "#f97316";
        }
      } 
-     // Cluster 4: Suhu Ekstrem (Panas Siang Bolong)
      else {
        teksKenyamanan = "🔥 Panas Banget! Wajib Nyalakan Kipas!";
-       warnaTeks = "#ef4444"; // Merah
+       warnaTeks = "#ef4444";
      }
 
-     // Tampilkan ke layar
      const boxKenyamanan = document.getElementById("statusKenyamanan");
      boxKenyamanan.textContent = teksKenyamanan;
      boxKenyamanan.style.color = warnaTeks;
   }  
 }
 
-// LOGIKA TIMER BARU (INSTANT UPDATE)
 function updateTimerLangsung(n) {
   if (!client) return;
   const t = document.getElementById("selR" + n).value;
   let isOn = (n===1 ? curR1 : (n===2 ? curR2 : curR3));
-  
-  // Jika perangkat sedang NYALA, langsung kirim perintah update timer ke ESP32
   if (isOn) {
     client.publish(TOPIC_CMD, "R" + n + ":" + t);
   }
@@ -323,10 +339,8 @@ function toggleRelay(n) {
   let isOn = (n===1 ? curR1 : (n===2 ? curR2 : curR3));
 
   if (isOn) {
-    // Jika posisi NYALA dan tombol ditekan, maka matikan (Kirim R:0)
     client.publish(TOPIC_CMD, "R" + n + ":0");
   } else {
-    // Jika posisi MATI, nyalakan sesuai pilihan timer di dropdown
     client.publish(TOPIC_CMD, "R" + n + ":" + t);
   }
 }
@@ -344,6 +358,205 @@ function modeSleep() {
   if (!curR2) { setTimeout(() => { client.publish(TOPIC_CMD, "R2:120"); }, jeda); }
 }
 
+// ==========================================
+// 3. FITUR PERINTAH SUARA (WEB SPEECH API)
+// ==========================================
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let bannerTimeout = null;
+
+function tampilkanStatusSuara(pesan, warnaBorder = "#0ea5e9", autoHide = true) {
+  const banner = document.getElementById("voiceStatus");
+  banner.textContent = pesan;
+  banner.style.borderColor = warnaBorder;
+  banner.style.display = "block";
+  clearTimeout(bannerTimeout);
+  if (autoHide) {
+    bannerTimeout = setTimeout(() => { banner.style.display = "none"; }, 4000);
+  }
+}
+
+let sedangMendengarkan = false;
+let jedaEksekusiSuara = null;
+
+function mulaiPerintahSuara() {
+  if (!SpeechRecognition) {
+    tampilkanStatusSuara("⚠️ Browser ini tidak mendukung perintah suara.", "#ef4444");
+    return;
+  }
+  if (!client || !client.connected) {
+    tampilkanStatusSuara("⚠️ MQTT belum terhubung.", "#ef4444");
+    return;
+  }
+  if (sedangMendengarkan) return;
+
+  if (recognition) {
+    try { recognition.abort(); } catch(e) {}
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "id-ID";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  const btnMic = document.getElementById("btnMic");
+  let teksTerkumpul = "";
+  let sudahDieksekusi = false;
+
+  recognition.onstart = function() {
+    sedangMendengarkan = true;
+    btnMic.classList.add("listening");
+    tampilkanStatusSuara("🎙️ Silakan bicara... (Contoh: 'Matikan lampu')", "#ef4444", false);
+  };
+
+  recognition.onresult = function(event) {
+    if (sudahDieksekusi) return;
+
+    // Kumpulkan semua potongan kata yang masuk dalam satu kalimat
+    let gabungan = "";
+    for (let i = 0; i < event.results.length; i++) {
+      gabungan += event.results[i][0].transcript + " ";
+    }
+    teksTerkumpul = gabungan.toLowerCase().trim().replace(/\s+/g, " ");
+
+    // Tampilkan sementara di banner sambil menunggu kalimat selesai
+    tampilkanStatusSuara(`🎙️ Mendengar: "${teksTerkumpul}"...`, "#0ea5e9", false);
+
+    // Tunggu 800ms setelah kata terakhir sebelum eksekusi (anti terpotong & anti spam)
+    clearTimeout(jedaEksekusiSuara);
+    jedaEksekusiSuara = setTimeout(() => {
+      if (!sudahDieksekusi && teksTerkumpul !== "") {
+        sudahDieksekusi = true;
+        try { recognition.stop(); } catch(e) {}
+        eksekusiPerintahSuara(teksTerkumpul);
+      }
+    }, 800);
+  };
+
+  recognition.onerror = function(event) {
+    clearTimeout(jedaEksekusiSuara);
+    sedangMendengarkan = false;
+    btnMic.classList.remove("listening");
+    if (event.error === "not-allowed") {
+      tampilkanStatusSuara("⚠️ Izin mikrofon ditolak browser.", "#ef4444");
+    } else if (event.error === "no-speech") {
+      tampilkanStatusSuara("🔇 Tidak ada suara terdeteksi.", "#eab308");
+    } else if (event.error !== "aborted") {
+      tampilkanStatusSuara("⚠️ Gagal mendengar: " + event.error, "#ef4444");
+    }
+  };
+
+  recognition.onend = function() {
+    sedangMendengarkan = false;
+    btnMic.classList.remove("listening");
+    clearTimeout(jedaEksekusiSuara);
+    // Eksekusi jika mic otomatis berhenti sebelum 800ms
+    if (!sudahDieksekusi && teksTerkumpul !== "") {
+      sudahDieksekusi = true;
+      eksekusiPerintahSuara(teksTerkumpul);
+    }
+  };
+
+  recognition.start();
+}
+
+function ekstrakDurasiMenit(teks) {
+  if (teks.includes("30 menit") || teks.includes("setengah jam")) return 30;
+  if (teks.includes("1 jam") || teks.includes("satu jam")) return 60;
+  if (teks.includes("2 jam") || teks.includes("dua jam")) return 120;
+  if (teks.includes("4 jam") || teks.includes("empat jam")) return 240;
+  return 0;
+}
+
+function eksekusiPerintahSuara(teks) {
+  const isNyalakan = teks.includes("nyala") || teks.includes("hidup") || teks.includes("on");
+  const isMatikan  = teks.includes("mati") || teks.includes("patikan") || teks.includes("off");
+  const durasi     = ekstrakDurasiMenit(teks);
+  const labelDurasi = durasi > 0 ? ` (${durasi} menit)` : "";
+
+  // 1. Mode Tewas / Sleep
+  if (teks.includes("mode tewas") || teks.includes("mode sleep") || teks.includes("tidur")) {
+    modeSleep();
+    tampilkanStatusSuara(`🌙 "${teks}" → Mode Tewas diaktifkan`, "#6366f1");
+    return;
+  }
+
+  // 2. Pintu
+  if (teks.includes("pintu")) {
+    if (teks.includes("buka")) {
+      if (!curPintu) client.publish(TOPIC_CMD, "TOGGLE_PINTU");
+      tampilkanStatusSuara(`🚪 "${teks}" → Pintu dibuka`, "#10b981");
+    } else if (teks.includes("kunci") || teks.includes("tutup")) {
+      if (curPintu) client.publish(TOPIC_CMD, "TOGGLE_PINTU");
+      tampilkanStatusSuara(`🔒 "${teks}" → Pintu dikunci`, "#10b981");
+    } else {
+      togglePintu();
+      tampilkanStatusSuara(`🚪 "${teks}" → Status pintu diubah`, "#10b981");
+    }
+    return;
+  }
+
+  // 3. Matikan Semua Perangkat
+  if (isMatikan && teks.includes("semua")) {
+    let jeda = 0;
+    if (curR1) { setTimeout(() => client.publish(TOPIC_CMD, "R1:0"), jeda); jeda += 250; }
+    if (curR2) { setTimeout(() => client.publish(TOPIC_CMD, "R2:0"), jeda); jeda += 250; }
+    if (curR3) { setTimeout(() => client.publish(TOPIC_CMD, "R3:0"), jeda); }
+    tampilkanStatusSuara(`🛑 "${teks}" → Semua perangkat dimatikan`, "#10b981");
+    return;
+  }
+
+  // 4. Lampu (R1)
+  if (teks.includes("lampu")) {
+    if (isMatikan) {
+      if (curR1) client.publish(TOPIC_CMD, "R1:0");
+      tampilkanStatusSuara(`💡 "${teks}" → Lampu dimatikan`, "#10b981");
+    } else if (isNyalakan || durasi > 0) {
+      if (!curR1 || durasi > 0) client.publish(TOPIC_CMD, "R1:" + durasi);
+      tampilkanStatusSuara(`💡 "${teks}" → Lampu dinyalakan${labelDurasi}`, "#10b981");
+    } else {
+      toggleRelay(1);
+      tampilkanStatusSuara(`💡 "${teks}" → Saklar lampu diubah`, "#10b981");
+    }
+    return;
+  }
+
+  // 5. Kipas (R2)
+  if (teks.includes("kipas")) {
+    if (isMatikan) {
+      if (curR2) client.publish(TOPIC_CMD, "R2:0");
+      tampilkanStatusSuara(`🌀 "${teks}" → Kipas dimatikan`, "#10b981");
+    } else if (isNyalakan || durasi > 0) {
+      if (!curR2 || durasi > 0) client.publish(TOPIC_CMD, "R2:" + durasi);
+      tampilkanStatusSuara(`🌀 "${teks}" → Kipas dinyalakan${labelDurasi}`, "#10b981");
+    } else {
+      toggleRelay(2);
+      tampilkanStatusSuara(`🌀 "${teks}" → Saklar kipas diubah`, "#10b981");
+    }
+    return;
+  }
+
+  // 6. Stopkontak (R3)
+  if (teks.includes("stopkontak") || teks.includes("stop kontak") || teks.includes("colokan")) {
+    if (isMatikan) {
+      if (curR3) client.publish(TOPIC_CMD, "R3:0");
+      tampilkanStatusSuara(`🔌 "${teks}" → Stopkontak dimatikan`, "#10b981");
+    } else if (isNyalakan || durasi > 0) {
+      if (!curR3 || durasi > 0) client.publish(TOPIC_CMD, "R3:" + durasi);
+      tampilkanStatusSuara(`🔌 "${teks}" → Stopkontak dinyalakan${labelDurasi}`, "#10b981");
+    } else {
+      toggleRelay(3);
+      tampilkanStatusSuara(`🔌 "${teks}" → Saklar stopkontak diubah`, "#10b981");
+    }
+    return;
+  }
+
+  tampilkanStatusSuara(`❓ Terdengar: "${teks}" (Perintah tidak dikenali)`, "#eab308");
+}
+
+// ==========================================
+// 4. KONEKSI MQTT & INIT
+// ==========================================
 function connectMQTT(u, p) {
   if (client) client.end();
   client = mqtt.connect(MQTT_HOST, { clientId: 'WebDashboard_' + Math.random().toString(16).substr(2, 8), username: u, password: p, clean: true });
@@ -358,7 +571,6 @@ function connectMQTT(u, p) {
     client.subscribe(TOPIC_STATE);
     client.publish(TOPIC_CMD, "GET_STATUS");
     
-    // Muat Widget saat berhasil login
     loadWidgets();
   });
 
@@ -388,10 +600,7 @@ document.getElementById("loginForm").addEventListener("submit", function(e) {
 });
 
 // ==========================================
-// 3. FITUR WIDGET CUACA & SHOLAT (JEMBER)
-// ==========================================
-// ==========================================
-// 3. WIDGET CUACA & SHOLAT (VERSI CACHE SUPER CEPAT)
+// 5. WIDGET CUACA & SHOLAT (VERSI CACHE)
 // ==========================================
 async function loadWidgets() {
   try {
@@ -402,14 +611,13 @@ async function loadWidgets() {
     let wDataTime = localStorage.getItem("weatherTime");
     let wData;
     
-    // Jika belum ada cache ATAU cache sudah lebih tua dari 30 menit (1.800.000 ms), fetch baru!
     if (!wDataStr || !wDataTime || (nowTime - wDataTime > 1800000)) {
       const wRes = await fetch("https://api.open-meteo.com/v1/forecast?latitude=-8.1724&longitude=113.7000&current_weather=true");
       wData = await wRes.json();
       localStorage.setItem("weatherCache", JSON.stringify(wData));
       localStorage.setItem("weatherTime", nowTime);
     } else {
-      wData = JSON.parse(wDataStr); // Pakai data simpanan, instan!
+      wData = JSON.parse(wDataStr);
     }
 
     document.getElementById("w-temp").textContent = Math.round(wData.current_weather.temperature) + "°C";
@@ -427,7 +635,6 @@ async function loadWidgets() {
     let pDataTime = localStorage.getItem("prayerTime");
     let pData;
     
-    // Sholat cukup di-update 1x sehari (86.400.000 ms)
     if (!pDataStr || !pDataTime || (nowTime - pDataTime > 86400000)) {
       const pRes = await fetch("https://api.aladhan.com/v1/timingsByCity?city=Jember&country=Indonesia&method=20");
       pData = await pRes.json();

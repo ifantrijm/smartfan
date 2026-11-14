@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Room IoT</title>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; padding: 15px; background: #0f1115; color: #e2e8f0; font-family: 'Segoe UI', Arial, sans-serif; }
+.container { max-width: 500px; margin: auto; }
+
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 5px; }
+.header h2 { margin: 0; font-size: 24px; color: #0ea5e9; font-weight: 700; letter-spacing: 0.5px; }
+.header p { margin: 2px 0 0 0; color: #64748b; font-size: 13px; }
+
+.card { background: #1e222a; padding: 20px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid #2a2e37; }
+.card h3 { margin: 0 0 20px 0; font-size: 18px; color: #f8fafc; font-weight: 600; display:flex; align-items:center; gap:8px;}
+
+/* WIDGET CUACA & SHOLAT */
+.info-widget { display: flex; gap: 12px; margin-bottom: 20px; }
+.widget-box { flex: 1; background: #1e222a; border-radius: 16px; padding: 15px 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.2); border: 1px solid #2a2e37; }
+.widget-icon { font-size: 28px; line-height: 1; }
+.widget-val { font-size: 15px; color: #f8fafc; font-weight: 700; margin-bottom: 2px; }
+.widget-desc { font-size: 12px; color: #94a3b8; font-weight: 500; }
+
+input { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #334155; background: #0f1115; color: white; border-radius: 12px; font-size: 15px; }
+input:focus { outline: none; border-color: #0ea5e9; }
+button { border: none; padding: 14px; border-radius: 12px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+button:active { transform: scale(0.97); }
+.full { width: 100%; }
+
+.on { background: #10b981; }
+.off { background: #ef4444; }
+.blue { background: #0ea5e9; }
+
+.logout-btn { background: #ef4444; padding: 10px 14px; border-radius: 10px; display: flex; align-items: center; gap:6px; font-size:13px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); }
+.logout-btn svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* SENSOR GAUGE */
+.sensor { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+.sensor-box { display:flex; flex-direction:column; align-items:center; justify-content:center; background: #1e222a; padding: 25px 10px 15px 10px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid #2a2e37;}
+.sensor-box small { color: #94a3b8; font-size: 14px; font-weight: 600; margin-top: 15px;}
+.gauge-wrapper { position: relative; width: 140px; height: 70px; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
+.gauge-bg, .gauge-fill { position: absolute; top: 0; left: 0; width: 140px; height: 140px; box-sizing: border-box; border-radius: 50%; border: 16px solid #334155; border-bottom-color: transparent !important; border-left-color: transparent !important; }
+.gauge-bg { transform: rotate(-45deg); }
+.gauge-fill { transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1); }
+.gauge-val { position: absolute; bottom: 0; width: 100%; text-align: center; font-size: 24px; font-weight: 700; color: #f8fafc; line-height: 1; }
+
+/* ROW DEVICES */
+.device-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #2a2e37; }
+.device-row:last-child { border-bottom: none; padding-bottom: 0; }
+.device-info { display: flex; flex-direction: column; }
+.device-name { font-size: 16px; font-weight: 500; color: #e2e8f0; }
+.timer-label { font-size: 12px; color: #10b981; margin-top: 4px; font-weight:600; min-height: 15px;}
+.timer-select { background: #0f1115; color: #94a3b8; border: 1px solid #334155; border-radius: 8px; padding: 8px 10px; font-size: 13px; outline: none; margin-right: 10px; cursor:pointer;}
+.message { color: #ef4444; font-size: 14px; text-align: center; margin-top: 15px;}
+#dashboard, #loginPage, #logoutDiv { display: none; }
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <h2>⚡ SmartFan</h2>
+      <p>Solusi Mager</p>
+    </div>
+    <div id="logoutDiv">
+      <button class="logout-btn" onclick="logout()" title="Logout">
+        <svg viewBox="0 0 24 24">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- HALAMAN LOGIN -->
+  <div id="loginPage" class="card">
+    <h3 style="justify-content:center; color:#0ea5e9;">🔐 Login SmartFan</h3>
+    <form id="loginForm">
+      <input id="username" type="text" placeholder="Username" required>
+      <input id="password" type="password" placeholder="Password" required>
+      <button class="blue full" style="margin-top:10px;" type="submit">HUBUNGKAN</button>
+    </form>
+    <p id="loginMessage" class="message"></p>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard">
+
+    <!-- WIDGET CUACA & SHOLAT (UI BARU) -->
+    <div class="info-widget">
+      <div class="widget-box">
+        <span id="w-icon" class="widget-icon">☁️</span>
+        <div>
+          <div id="w-temp" class="widget-val">--°C</div>
+          <div id="w-desc" class="widget-desc">Memuat cuaca...</div>
+        </div>
+      </div>
+      <div class="widget-box">
+        <span class="widget-icon">🕌</span>
+        <div>
+          <div id="p-next" class="widget-val">Sholat</div>
+          <div id="p-time" class="widget-desc">Memuat...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SENSOR CSS -->
+    <div class="sensor">
+      <div class="sensor-box">
+        <div class="gauge-wrapper">
+          <div class="gauge-bg"></div>
+          <div id="barSuhu" class="gauge-fill" style="border-color: #eab308; transform: rotate(-225deg);"></div>
+          <div id="valSuhu" class="gauge-val">0.0°</div>
+        </div>
+        <small>Suhu</small>
+      </div>
+      <div class="sensor-box">
+        <div class="gauge-wrapper">
+          <div class="gauge-bg"></div>
+          <div id="barKelembapan" class="gauge-fill" style="border-color: #f97316; transform: rotate(-225deg);"></div>
+          <div id="valKelembapan" class="gauge-val">0.0%</div>
+        </div>
+        <small>Kelembapan</small>
+      </div>
+
+      <div id="statusKenyamanan" style="grid-column: span 2; text-align: center; background: #2a2e37; padding: 12px; border-radius: 12px; font-weight: 600; color: #0ea5e9; font-size: 14px; margin-top: 5px;">
+      🤖 Memantau kenyamanan kamar...
+    </div>
+    </div>
+
+    <!-- PINTU -->
+    <div class="card">
+      <h3>🚪 Pintu Utama</h3>
+      <button id="btnPintu" class="off full" onclick="togglePintu()" style="padding:16px;">BUKA PINTU</button>
+      <div style="text-align:center; margin-top:12px;">
+        <span id="statusPintu" style="color:#ef4444; font-size:13px; font-weight:600;">Terkunci Aman</span>
+      </div>
+    </div>
+
+    <!-- RELAY & TIMER -->
+    <div class="card">
+      <h3>🎛️ Kontrol & Timer</h3>
+
+      <button class="blue full" onclick="modeSleep()" style="margin-bottom: 15px; background: #6366f1;">
+        🌙 Mode Tewas
+      </button>
+      
+      <!-- PERBAIKAN TIMER: Tambah onchange="updateTimerLangsung(n)" -->
+      <div class="device-row">
+        <div class="device-info">
+          <span class="device-name">💡 Lampu</span>
+          <span id="infoR1" class="timer-label"></span>
+        </div>
+        <div style="display:flex; align-items:center;">
+          <select id="selR1" class="timer-select" onchange="updateTimerLangsung(1)">
+            <option value="0">Manual</option><option value="30">30 Menit</option><option value="60">1 Jam</option><option value="120">2 Jam</option>
+          </select>
+          <button id="btnR1" class="off" style="width:70px; padding:10px;" onclick="toggleRelay(1)">Mati</button>
+        </div>
+      </div>
+
+      <div class="device-row">
+        <div class="device-info">
+          <span class="device-name">🌀 Kipas</span>
+          <span id="infoR2" class="timer-label"></span>
+        </div>
+        <div style="display:flex; align-items:center;">
+          <select id="selR2" class="timer-select" onchange="updateTimerLangsung(2)">
+            <option value="0">Manual</option><option value="30">30 Menit</option><option value="60">1 Jam</option><option value="120">2 Jam</option><option value="240">4 Jam</option>
+          </select>
+          <button id="btnR2" class="off" style="width:70px; padding:10px;" onclick="toggleRelay(2)">Mati</button>
+        </div>
+      </div>
+
+      <div class="device-row">
+        <div class="device-info">
+          <span class="device-name">🔌 Stopkontak</span>
+          <span id="infoR3" class="timer-label"></span>
+        </div>
+        <div style="display:flex; align-items:center;">
+          <select id="selR3" class="timer-select" onchange="updateTimerLangsung(3)">
+            <option value="0">Manual</option><option value="30">30 Menit</option><option value="60">1 Jam</option><option value="120">2 Jam</option>
+          </select>
+          <button id="btnR3" class="off" style="width:70px; padding:10px;" onclick="toggleRelay(3)">Mati</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ==========================================
+// 1. KONFIGURASI MQTT & STORAGE
+// ==========================================
+const MQTT_HOST = "wss://bf7ee864.ala.asia-southeast1.emqxsl.com:8084/mqtt";
+const TOPIC_STATE = "smartfan/state";
+const TOPIC_CMD = "smartfan/cmd";
+const STORAGE_USER = "emqx_user";
+const STORAGE_PASS = "emqx_pass";
+
+let client = null;
+let curR1 = false, curR2 = false, curR3 = false, curPintu = false;
+
+// ==========================================
+// 2. LOGIKA UI & MQTT
+// ==========================================
+function updateButton(id, state, timerLabelId, timeLeft) {
+  const btn = document.getElementById(id);
+  const lbl = document.getElementById(timerLabelId);
+  btn.textContent = state ? "Hidup" : "Mati";
+  btn.className = state ? "on" : "off";
+  if (state && timeLeft > 0) { lbl.textContent = "⏱️ Mati dalam " + timeLeft + "m"; } 
+  else { lbl.textContent = ""; }
+}
+
+function updateDashboard(data) {
+  if (data.r1 !== undefined) curR1 = data.r1;
+  if (data.r2 !== undefined) curR2 = data.r2;
+  if (data.r3 !== undefined) curR3 = data.r3;
+  if (data.pintu !== undefined) curPintu = data.pintu;
+
+  updateButton("btnR1", data.r1, "infoR1", data.tR1);
+  updateButton("btnR2", data.r2, "infoR2", data.tR2);
+  updateButton("btnR3", data.r3, "infoR3", data.tR3);
+
+  const pintu = document.getElementById("btnPintu");
+  const statPintu = document.getElementById("statusPintu");
+  if (data.pintu) {
+    pintu.textContent = "KUNCI PINTU"; pintu.className = "on full";
+    statPintu.textContent = "Terbuka (Bisa digeser)"; statPintu.style.color = "#10b981";
+  } else {
+    pintu.textContent = "BUKA PINTU"; pintu.className = "off full";
+    statPintu.textContent = "Terkunci Aman"; statPintu.style.color = "#ef4444";
+  }
+
+  if(data.suhu !== undefined) {
+     let persentaseSuhu = data.suhu / 50;
+     if(persentaseSuhu > 1) persentaseSuhu = 1;
+     let derajatSuhu = -225 + (persentaseSuhu * 180);
+     document.getElementById("barSuhu").style.transform = `rotate(${derajatSuhu}deg)`;
+     document.getElementById("valSuhu").textContent = data.suhu + "°";
+  }
+  
+  if(data.kelembapan !== undefined) {
+     let persentaseLembap = data.kelembapan / 100;
+     if(persentaseLembap > 1) persentaseLembap = 1;
+     let derajatLembap = -225 + (persentaseLembap * 180);
+     document.getElementById("barKelembapan").style.transform = `rotate(${derajatLembap}deg)`;
+     document.getElementById("valKelembapan").textContent = data.kelembapan + "%";
+  }
+
+// =====================================
+  // LOGIKA CLUSTER KENYAMANAN (HEAT INDEX)
+  // =====================================
+  if(data.suhu !== undefined && data.kelembapan !== undefined) {
+     let t = data.suhu;
+     let h = data.kelembapan;
+     let teksKenyamanan = "";
+     let warnaTeks = "";
+
+     // Cluster 1: Suhu Dingin/Sejuk (AC menyala / Malam hujan)
+     if (t < 24) {
+       teksKenyamanan = "🥶 Sejuk & Dingin";
+       warnaTeks = "#0ea5e9"; // Biru
+     } 
+     // Cluster 2: Suhu Normal / Ideal (24 - 27)
+     else if (t >= 24 && t <= 27) {
+       if (h >= 40 && h <= 65) {
+         teksKenyamanan = "😌 Sangat Nyaman & Ideal";
+         warnaTeks = "#10b981"; // Hijau
+       } else {
+         teksKenyamanan = "😐 Agak Lembap (Sumuk Ringan)";
+         warnaTeks = "#eab308"; // Kuning
+       }
+     } 
+     // Cluster 3: Suhu Hangat (28 - 30)
+     else if (t > 27 && t <= 30) {
+       if (h < 60) {
+         teksKenyamanan = "🤔 Cukup Hangat";
+         warnaTeks = "#eab308"; // Kuning
+       } else {
+         teksKenyamanan = "🥵 Gerah & Sumuk (Keringat Susah Kering)";
+         warnaTeks = "#f97316"; // Oranye
+       }
+     } 
+     // Cluster 4: Suhu Ekstrem (Panas Siang Bolong)
+     else {
+       teksKenyamanan = "🔥 Panas Banget! Wajib Nyalakan Kipas!";
+       warnaTeks = "#ef4444"; // Merah
+     }
+
+     // Tampilkan ke layar
+     const boxKenyamanan = document.getElementById("statusKenyamanan");
+     boxKenyamanan.textContent = teksKenyamanan;
+     boxKenyamanan.style.color = warnaTeks;
+  }  
+}
+
+// LOGIKA TIMER BARU (INSTANT UPDATE)
+function updateTimerLangsung(n) {
+  if (!client) return;
+  const t = document.getElementById("selR" + n).value;
+  let isOn = (n===1 ? curR1 : (n===2 ? curR2 : curR3));
+  
+  // Jika perangkat sedang NYALA, langsung kirim perintah update timer ke ESP32
+  if (isOn) {
+    client.publish(TOPIC_CMD, "R" + n + ":" + t);
+  }
+}
+
+function toggleRelay(n) {
+  if (!client) return;
+  const t = document.getElementById("selR" + n).value;
+  let isOn = (n===1 ? curR1 : (n===2 ? curR2 : curR3));
+
+  if (isOn) {
+    // Jika posisi NYALA dan tombol ditekan, maka matikan (Kirim R:0)
+    client.publish(TOPIC_CMD, "R" + n + ":0");
+  } else {
+    // Jika posisi MATI, nyalakan sesuai pilihan timer di dropdown
+    client.publish(TOPIC_CMD, "R" + n + ":" + t);
+  }
+}
+
+function togglePintu() {
+  if (!client) return;
+  client.publish(TOPIC_CMD, "TOGGLE_PINTU");
+}
+
+function modeSleep() {
+  if (!client) return;
+  let jeda = 0;
+  if (curR1) { setTimeout(() => { client.publish(TOPIC_CMD, "R1:0"); }, jeda); jeda += 300; }
+  if (curPintu) { setTimeout(() => { client.publish(TOPIC_CMD, "TOGGLE_PINTU"); }, jeda); jeda += 300; }
+  if (!curR2) { setTimeout(() => { client.publish(TOPIC_CMD, "R2:120"); }, jeda); }
+}
+
+function connectMQTT(u, p) {
+  if (client) client.end();
+  client = mqtt.connect(MQTT_HOST, { clientId: 'WebDashboard_' + Math.random().toString(16).substr(2, 8), username: u, password: p, clean: true });
+
+  client.on('connect', function () {
+    localStorage.setItem(STORAGE_USER, u);
+    localStorage.setItem(STORAGE_PASS, p);
+    document.getElementById("loginMessage").textContent = "";
+    document.getElementById("loginPage").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    document.getElementById("logoutDiv").style.display = "block";
+    client.subscribe(TOPIC_STATE);
+    client.publish(TOPIC_CMD, "GET_STATUS");
+    
+    // Muat Widget saat berhasil login
+    loadWidgets();
+  });
+
+  client.on('message', function (topic, message) {
+    if (topic === TOPIC_STATE) {
+      try { updateDashboard(JSON.parse(message.toString())); } catch(e) {}
+    }
+  });
+
+  client.on('error', function (err) {
+    document.getElementById("loginMessage").textContent = "Gagal terhubung! Periksa koneksi atau kredensial EMQX.";
+    logout();
+  });
+}
+
+function logout() {
+  localStorage.removeItem(STORAGE_USER); localStorage.removeItem(STORAGE_PASS);
+  if (client) client.end();
+  document.getElementById("username").value = ""; document.getElementById("password").value = "";
+  document.getElementById("loginPage").style.display = "block"; document.getElementById("dashboard").style.display = "none"; document.getElementById("logoutDiv").style.display = "none";
+}
+
+document.getElementById("loginForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  document.getElementById("loginMessage").textContent = "Menghubungkan ke EMQX...";
+  connectMQTT(document.getElementById("username").value, document.getElementById("password").value);
+});
+
+// ==========================================
+// 3. FITUR WIDGET CUACA & SHOLAT (JEMBER)
+// ==========================================
+// ==========================================
+// 3. WIDGET CUACA & SHOLAT (VERSI CACHE SUPER CEPAT)
+// ==========================================
+async function loadWidgets() {
+  try {
+    const nowTime = new Date().getTime();
+    
+    // 1. CEK CACHE CUACA (Update tiap 30 Menit)
+    let wDataStr = localStorage.getItem("weatherCache");
+    let wDataTime = localStorage.getItem("weatherTime");
+    let wData;
+    
+    // Jika belum ada cache ATAU cache sudah lebih tua dari 30 menit (1.800.000 ms), fetch baru!
+    if (!wDataStr || !wDataTime || (nowTime - wDataTime > 1800000)) {
+      const wRes = await fetch("https://api.open-meteo.com/v1/forecast?latitude=-8.1724&longitude=113.7000&current_weather=true");
+      wData = await wRes.json();
+      localStorage.setItem("weatherCache", JSON.stringify(wData));
+      localStorage.setItem("weatherTime", nowTime);
+    } else {
+      wData = JSON.parse(wDataStr); // Pakai data simpanan, instan!
+    }
+
+    document.getElementById("w-temp").textContent = Math.round(wData.current_weather.temperature) + "°C";
+    const code = wData.current_weather.weathercode;
+    let icon = "🌤️", desc = "Cerah Berawan";
+    if(code === 0) { icon = "☀️"; desc = "Cerah"; }
+    else if(code <= 3) { icon = "⛅"; desc = "Berawan"; }
+    else if(code <= 67) { icon = "🌧️"; desc = "Hujan"; }
+    else if(code <= 99) { icon = "⛈️"; desc = "Badai Petir"; }
+    document.getElementById("w-icon").textContent = icon;
+    document.getElementById("w-desc").textContent = desc;
+
+    // 2. CEK CACHE SHOLAT (Update tiap 24 Jam)
+    let pDataStr = localStorage.getItem("prayerCache");
+    let pDataTime = localStorage.getItem("prayerTime");
+    let pData;
+    
+    // Sholat cukup di-update 1x sehari (86.400.000 ms)
+    if (!pDataStr || !pDataTime || (nowTime - pDataTime > 86400000)) {
+      const pRes = await fetch("https://api.aladhan.com/v1/timingsByCity?city=Jember&country=Indonesia&method=20");
+      pData = await pRes.json();
+      localStorage.setItem("prayerCache", JSON.stringify(pData));
+      localStorage.setItem("prayerTime", nowTime);
+    } else {
+      pData = JSON.parse(pDataStr);
+    }
+
+    const timings = pData.data.timings;
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    const prayers = [
+      { name: 'Subuh', time: timings.Fajr }, { name: 'Dzuhur', time: timings.Dhuhr },
+      { name: 'Ashar', time: timings.Asr }, { name: 'Maghrib', time: timings.Maghrib }, { name: 'Isya', time: timings.Isha }
+    ];
+    
+    let nextPrayer = prayers[0];
+    for(let p of prayers) {
+      let [h, m] = p.time.split(':');
+      let pTime = parseInt(h)*60 + parseInt(m);
+      if(pTime > currentTime) {
+        nextPrayer = p;
+        break;
+      }
+    }
+    
+    document.getElementById("p-next").textContent = nextPrayer.name;
+    document.getElementById("p-time").textContent = nextPrayer.time + " WIB";
+
+  } catch(e) {
+    console.log("Gagal memuat widget:", e);
+  }
+}
+
+function initApp() {
+  const savedUser = localStorage.getItem(STORAGE_USER);
+  const savedPass = localStorage.getItem(STORAGE_PASS);
+  if (savedUser && savedPass) {
+    document.getElementById("loginPage").style.display = "none";
+    connectMQTT(savedUser, savedPass);
+  } else {
+    document.getElementById("loginPage").style.display = "block";
+  }
+}
+
+window.onload = initApp;
+</script>
+</body>
+</html>
