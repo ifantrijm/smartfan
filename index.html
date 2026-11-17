@@ -39,14 +39,20 @@ body { margin: 0; padding: 15px; background: #0f1115; color: #e2e8f0; font-famil
 .voice-banner { display: none; background: #1e293b; border: 1px solid #0ea5e9; color: #e2e8f0; padding: 12px 15px; border-radius: 14px; margin-bottom: 16px; font-size: 13px; text-align: center; font-weight: 500; }
 .ring-alert-banner { display: none; background: #f59e0b; color: #0f1115; padding: 14px; border-radius: 14px; margin-bottom: 16px; font-size: 14px; font-weight: 800; text-align: center; cursor: pointer; animation: pulseMic 1s infinite; }
 
-/* MODAL POP-UP ALARM */
+/* MODAL POP-UP ALARM (FORMAT 24 JAM) */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); z-index: 999; align-items: center; justify-content: center; padding: 15px; }
 .modal-box { background: #1e222a; border: 1px solid #334155; border-radius: 20px; width: 100%; max-width: 380px; padding: 22px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); animation: popIn 0.2s ease-out; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
 .modal-header h3 { margin: 0; font-size: 18px; color: #f8fafc; }
 .close-modal-btn { background: #2a2e37; color: #94a3b8; padding: 6px 11px; border-radius: 8px; font-size: 14px; line-height: 1; }
 .alarm-controls { display: flex; gap: 10px; align-items: center; }
-.alarm-time-input { margin: 0; flex: 1; text-align: center; font-size: 20px; font-weight: 700; letter-spacing: 1px; color-scheme: dark; }
+
+.alarm-time-group { display: flex; align-items: center; justify-content: center; gap: 4px; flex: 1; background: #0f1115; border: 1px solid #334155; border-radius: 12px; padding: 4px 8px; }
+.alarm-select { background: transparent; color: #f8fafc; border: none; font-size: 22px; font-weight: 700; text-align: center; outline: none; cursor: pointer; padding: 8px 6px; border-radius: 8px; appearance: none; -webkit-appearance: none; }
+.alarm-select:hover, .alarm-select:focus { background: #1e293b; color: #38bdf8; }
+.alarm-select option { background: #1e222a; color: #f8fafc; font-size: 16px; }
+.alarm-colon { font-size: 22px; font-weight: 700; color: #0ea5e9; padding-bottom: 2px; }
+
 .alarm-status-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 14px; border-top: 1px solid #2a2e37; font-size: 13px; }
 .modal-hint { margin-top: 12px; font-size: 12px; color: #64748b; text-align: center; }
 
@@ -105,9 +111,6 @@ button:active { transform: scale(0.97); }
     <div id="logoutDiv">
       <div class="header-actions">
         <!-- IKON ALARM POP-UP -->
-         <button id="btnJarvis" class="icon-btn" onclick="toggleModeJarvis()" title="Mode Standby Jarvis">
-          🤖
-        </button>
         <button id="btnAlarmModal" class="icon-btn" onclick="bukaModalAlarm()" title="Atur Alarm">
           <svg viewBox="0 0 24 24">
             <circle cx="12" cy="13" r="8"></circle>
@@ -262,7 +265,7 @@ button:active { transform: scale(0.97); }
   </div>
 </div>
 
-<!-- POP-UP MODAL ALARM -->
+<!-- POP-UP MODAL ALARM (FORMAT 24 JAM) -->
 <div id="alarmModal" class="modal-overlay" onclick="tutupModalAlarm(event)">
   <div class="modal-box" onclick="event.stopPropagation()">
     <div class="modal-header">
@@ -271,7 +274,11 @@ button:active { transform: scale(0.97); }
     </div>
 
     <div class="alarm-controls">
-      <input type="time" id="alarmInput" class="alarm-time-input" value="05:30">
+      <div class="alarm-time-group" title="Pilih Jam & Menit (Format 24 Jam)">
+        <select id="alarmHour" class="alarm-select"></select>
+        <span class="alarm-colon">:</span>
+        <select id="alarmMin" class="alarm-select"></select>
+      </div>
       <button class="blue" style="padding: 14px 18px;" onclick="pasangAlarm()">Setel</button>
       <button class="muted" style="padding: 14px 14px;" onclick="nonaktifkanAlarm()">Off</button>
     </div>
@@ -300,12 +307,50 @@ const STORAGE_PASS = "emqx_pass";
 let client = null;
 let curR1 = false, curR2 = false, curR3 = false, curPintu = false;
 let curAlarmRing = false;
+let curAlarmOn = false;
+let curAlarmTime = "";
 let alarmInputInitialized = false;
 
 // ==========================================
-// 2. KONTROL POP-UP MODAL ALARM
+// 2. KONTROL PEMILIH JAM 24-JAM & POP-UP ALARM
 // ==========================================
+function initAlarmPicker() {
+  const selJam = document.getElementById("alarmHour");
+  const selMenit = document.getElementById("alarmMin");
+  for (let h = 0; h < 24; h++) {
+    const val = String(h).padStart(2, "0");
+    selJam.innerHTML += `<option value="${val}">${val}</option>`;
+  }
+  for (let m = 0; m < 60; m++) {
+    const val = String(m).padStart(2, "0");
+    selMenit.innerHTML += `<option value="${val}">${val}</option>`;
+  }
+  setAlarmPickerKeSekarang();
+}
+
+function setAlarmPickerKeSekarang() {
+  const now = new Date();
+  document.getElementById("alarmHour").value = String(now.getHours()).padStart(2, "0");
+  document.getElementById("alarmMin").value = String(now.getMinutes()).padStart(2, "0");
+}
+
+function setAlarmPickerValue(hhmm) {
+  if (!hhmm || !hhmm.includes(":")) return;
+  const [h, m] = hhmm.split(":");
+  document.getElementById("alarmHour").value = h.padStart(2, "0");
+  document.getElementById("alarmMin").value = m.padStart(2, "0");
+}
+
+function getAlarmPickerValue() {
+  return document.getElementById("alarmHour").value + ":" + document.getElementById("alarmMin").value;
+}
+
 function bukaModalAlarm() {
+  if (curAlarmOn && curAlarmTime) {
+    setAlarmPickerValue(curAlarmTime);
+  } else {
+    setAlarmPickerKeSekarang();
+  }
   document.getElementById("alarmModal").style.display = "flex";
 }
 
@@ -350,10 +395,18 @@ function updateDashboard(data) {
   // Update Status Alarm (Modal & Ikon Header)
   const btnAlarmIcon = document.getElementById("btnAlarmModal");
   if (data.alarm !== undefined && data.alarmOn !== undefined) {
+    curAlarmOn = data.alarmOn;
+    curAlarmTime = data.alarm;
+
     if (!alarmInputInitialized) {
-      document.getElementById("alarmInput").value = data.alarm;
+      if (data.alarmOn) {
+        setAlarmPickerValue(data.alarm);
+      } else {
+        setAlarmPickerKeSekarang();
+      }
       alarmInputInitialized = true;
     }
+
     const statusText = document.getElementById("statusAlarmText");
     if (data.alarmOn) {
       statusText.textContent = "Aktif • " + data.alarm + " WIB";
@@ -472,8 +525,7 @@ function pasangAlarm() {
     alert("MQTT belum terhubung!");
     return;
   }
-  const val = document.getElementById("alarmInput").value;
-  if (!val) return;
+  const val = getAlarmPickerValue();
   const statusText = document.getElementById("statusAlarmText");
   statusText.textContent = "Menyimpan " + val + "...";
   statusText.style.color = "#eab308";
@@ -494,54 +546,22 @@ function hentikanBunyiAlarm() {
 }
 
 // ==========================================
-// 4. FITUR INPUT & OUTPUT SUARA + MODE JARVIS
+// 4. FITUR INPUT & OUTPUT SUARA (DEFAULT)
 // ==========================================
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
 let bannerTimeout = null;
 let sedangMendengarkan = false;
 let jedaEksekusiSuara = null;
-let modeJarvisAktif = false;
-let menungguPerintahSetelahPanggilan = false;
 
-// Pilih suara cowok jika tersedia, atau turunkan pitch agar nge-bass
-function bicara(teks, setelahBicara = null) {
-  if (!('speechSynthesis' in window)) {
-    if (setelahBicara) setelahBicara();
-    return;
-  }
+function bicara(teks) {
+  if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
-
   const ucapan = new SpeechSynthesisUtterance(teks);
   ucapan.lang = "id-ID";
-
-  const daftarSuara = window.speechSynthesis.getVoices();
-  const suaraCowok = daftarSuara.find(v =>
-    v.lang.includes("id") &&
-    (v.name.toLowerCase().includes("ardi") ||
-     v.name.toLowerCase().includes("male") ||
-     v.name.toLowerCase().includes("pria"))
-  );
-
-  if (suaraCowok) {
-    ucapan.voice = suaraCowok;
-    ucapan.pitch = 0.95;
-  } else {
-    // Efek suara berat/maskulin jika hanya ada TTS bawaan Android
-    ucapan.pitch = 0.75;
-  }
-  ucapan.rate = 1.02;
-
-  ucapan.onend = function() {
-    if (setelahBicara) setelahBicara();
-  };
-
+  ucapan.rate = 1.05;
+  ucapan.pitch = 1.0;
   window.speechSynthesis.speak(ucapan);
-}
-
-// Muat daftar suara lebih awal di Chrome
-if ('speechSynthesis' in window) {
-  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 }
 
 function tampilkanStatusSuara(pesan, warnaBorder = "#0ea5e9", autoHide = true) {
@@ -555,48 +575,15 @@ function tampilkanStatusSuara(pesan, warnaBorder = "#0ea5e9", autoHide = true) {
   }
 }
 
-// Toggle Mode Standby ("Panggil Jarvis tanpa pencet mic")
-function toggleModeJarvis() {
+function mulaiPerintahSuara() {
   if (!SpeechRecognition) {
-    tampilkanStatusSuara("⚠️ Browser ini tidak mendukung fitur suara.", "#ef4444");
+    tampilkanStatusSuara("⚠️ Browser ini tidak mendukung perintah suara.", "#ef4444");
     return;
   }
   if (!client || !client.connected) {
     tampilkanStatusSuara("⚠️ MQTT belum terhubung.", "#ef4444");
     return;
   }
-
-  modeJarvisAktif = !modeJarvisAktif;
-  const btnJarvis = document.getElementById("btnJarvis");
-
-  if (modeJarvisAktif) {
-    btnJarvis.classList.add("alarm-active");
-    tampilkanStatusSuara("🤖 Mode Jarvis Aktif! Panggil 'Jarvis...' kapan saja.", "#10b981", false);
-    bicara("Sistem Jarvis siap. Panggil nama saya kapan saja.", () => {
-      if (modeJarvisAktif) mulaiSesiDengar(true);
-    });
-  } else {
-    btnJarvis.classList.remove("alarm-active");
-    menungguPerintahSetelahPanggilan = false;
-    if (recognition) {
-      try { recognition.abort(); } catch(e) {}
-    }
-    tampilkanStatusSuara("🤖 Mode Jarvis dimatikan.", "#64748b");
-    bicara("Mode standby dimatikan.");
-  }
-}
-
-// Tombol Mic Manual (1x perintah tanpa kata pemicu)
-function mulaiPerintahSuara() {
-  if (modeJarvisAktif) {
-    tampilkanStatusSuara("🤖 Mode Jarvis sedang aktif, langsung panggil 'Jarvis...'", "#10b981");
-    return;
-  }
-  mulaiSesiDengar(false);
-}
-
-function mulaiSesiDengar(isStandby) {
-  if (!SpeechRecognition || !client || !client.connected) return;
   if (sedangMendengarkan) return;
 
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
@@ -615,10 +602,8 @@ function mulaiSesiDengar(isStandby) {
 
   recognition.onstart = function() {
     sedangMendengarkan = true;
-    if (!isStandby) {
-      btnMic.classList.add("listening");
-      tampilkanStatusSuara("🎙️ Silakan bicara... (Contoh: 'Buka pintu')", "#ef4444", false);
-    }
+    btnMic.classList.add("listening");
+    tampilkanStatusSuara("🎙️ Silakan bicara... (Contoh: 'Buka pintu')", "#ef4444", false);
   };
 
   recognition.onresult = function(event) {
@@ -630,31 +615,28 @@ function mulaiSesiDengar(isStandby) {
     }
     teksTerkumpul = gabungan.toLowerCase().trim().replace(/\s+/g, " ");
 
-    if (!isStandby) {
-      tampilkanStatusSuara(`🎙️ Mendengar: "${teksTerkumpul}"...`, "#0ea5e9", false);
-    }
+    tampilkanStatusSuara(`🎙️ Mendengar: "${teksTerkumpul}"...`, "#0ea5e9", false);
 
     clearTimeout(jedaEksekusiSuara);
     jedaEksekusiSuara = setTimeout(() => {
       if (!sudahDieksekusi && teksTerkumpul !== "") {
         sudahDieksekusi = true;
         try { recognition.stop(); } catch(e) {}
-        prosesHasilSuara(teksTerkumpul, isStandby);
+        eksekusiPerintahSuara(teksTerkumpul);
       }
-    }, 750);
+    }, 800);
   };
 
   recognition.onerror = function(event) {
     clearTimeout(jedaEksekusiSuara);
     sedangMendengarkan = false;
     btnMic.classList.remove("listening");
-
     if (event.error === "not-allowed") {
-      modeJarvisAktif = false;
-      document.getElementById("btnJarvis").classList.remove("alarm-active");
       tampilkanStatusSuara("⚠️ Izin mikrofon ditolak browser.", "#ef4444");
-    } else if (!isStandby && event.error === "no-speech") {
+    } else if (event.error === "no-speech") {
       tampilkanStatusSuara("🔇 Tidak ada suara terdeteksi.", "#eab308");
+    } else if (event.error !== "aborted") {
+      tampilkanStatusSuara("⚠️ Gagal mendengar: " + event.error, "#ef4444");
     }
   };
 
@@ -662,65 +644,13 @@ function mulaiSesiDengar(isStandby) {
     sedangMendengarkan = false;
     btnMic.classList.remove("listening");
     clearTimeout(jedaEksekusiSuara);
-
     if (!sudahDieksekusi && teksTerkumpul !== "") {
       sudahDieksekusi = true;
-      prosesHasilSuara(teksTerkumpul, isStandby);
-      return;
-    }
-
-    // Jika Mode Jarvis aktif dan tidak sedang berbicara, dengarkan lagi otomatis
-    if (modeJarvisAktif && !window.speechSynthesis.speaking) {
-      setTimeout(() => {
-        if (modeJarvisAktif && !sedangMendengarkan) mulaiSesiDengar(true);
-      }, 350);
+      eksekusiPerintahSuara(teksTerkumpul);
     }
   };
 
-  try {
-    recognition.start();
-  } catch(e) {
-    sedangMendengarkan = false;
-  }
-}
-
-function prosesHasilSuara(teks, isStandby) {
-  // Jika bukan mode standby, langsung eksekusi perintah
-  if (!isStandby) {
-    eksekusiPerintahSuara(teks, false);
-    return;
-  }
-
-  // Cek kata panggilan ("jarvis", "jervis", "servis", "darvis")
-  const regexPanggilan = /\b(jarvis|jervis|servis|darvis|davis)\b/i;
-  const adaPanggilan = regexPanggilan.test(teks);
-
-  if (adaPanggilan) {
-    // Hapus kata "jarvis" dari kalimat untuk mengambil inti perintahnya
-    const perintahBersih = teks.replace(regexPanggilan, "").trim();
-
-    if (perintahBersih.length > 1) {
-      // Contoh: "Jarvis nyalakan kipas 1 jam"
-      menungguPerintahSetelahPanggilan = false;
-      eksekusiPerintahSuara(perintahBersih, true);
-    } else {
-      // Contoh: Hanya memanggil "Jarvis" saja
-      menungguPerintahSetelahPanggilan = true;
-      tampilkanStatusSuara("🤖 Jarvis mendengarkan perintahmu...", "#0ea5e9", false);
-      bicara("Ya, ada yang bisa dibantu?", () => {
-        if (modeJarvisAktif) mulaiSesiDengar(true);
-      });
-    }
-  } else if (menungguPerintahSetelahPanggilan) {
-    // Kalimat lanjutan setelah Jarvis menyahut
-    menungguPerintahSetelahPanggilan = false;
-    eksekusiPerintahSuara(teks, true);
-  } else {
-    // Abaikan obrolan biasa di kamar yang tidak menyebut "Jarvis"
-    if (modeJarvisAktif) {
-      setTimeout(() => mulaiSesiDengar(true), 300);
-    }
-  }
+  recognition.start();
 }
 
 function ekstrakDurasiMenit(teks) {
@@ -759,19 +689,12 @@ function ekstrakWaktuAlarm(teks) {
   return String(jam).padStart(2, "0") + ":" + String(menit).padStart(2, "0");
 }
 
-function eksekusiPerintahSuara(teks, lanjutStandby = false) {
+function eksekusiPerintahSuara(teks) {
   const isNyalakan = teks.includes("nyala") || teks.includes("hidup") || teks.includes("on");
   const isMatikan  = teks.includes("mati") || teks.includes("patikan") || teks.includes("off") || teks.includes("henti") || teks.includes("diam");
   const durasi     = ekstrakDurasiMenit(teks);
   const teksDurasi = formatTeksDurasi(durasi);
   const labelDurasi = durasi > 0 ? ` (${teksDurasi})` : "";
-
-  const selesaiBicara = () => {
-    if (lanjutStandby && modeJarvisAktif) {
-      tampilkanStatusSuara("🤖 Mode Jarvis Aktif! Panggil 'Jarvis...' kapan saja.", "#10b981", false);
-      mulaiSesiDengar(true);
-    }
-  };
 
   // 1. Kontrol Alarm
   if (teks.includes("alarm")) {
@@ -780,35 +703,35 @@ function eksekusiPerintahSuara(teks, lanjutStandby = false) {
       if (curAlarmRing && !teks.includes("nonaktif")) {
         client.publish(TOPIC_CMD, "STOP_ALARM");
         tampilkanStatusSuara(`🔕 "${teks}" → Bunyi alarm dihentikan`, "#10b981");
-        bicara("Siap, bunyi alarm sudah dihentikan", selesaiBicara);
+        bicara("Bunyi alarm berhasil dihentikan");
       } else {
         statusText.textContent = "Mematikan alarm...";
         statusText.style.color = "#eab308";
         client.publish(TOPIC_CMD, "OFF_ALARM");
         tampilkanStatusSuara(`🔕 "${teks}" → Alarm dinonaktifkan`, "#10b981");
-        bicara("Siap, alarm dinonaktifkan", selesaiBicara);
+        bicara("Alarm berhasil dinonaktifkan");
       }
       return;
     }
 
     const waktuBaru = ekstrakWaktuAlarm(teks);
     if (waktuBaru) {
-      document.getElementById("alarmInput").value = waktuBaru;
+      setAlarmPickerValue(waktuBaru);
       statusText.textContent = "Menyimpan " + waktuBaru + "...";
       statusText.style.color = "#eab308";
       client.publish(TOPIC_CMD, "SET_ALARM:" + waktuBaru);
       tampilkanStatusSuara(`⏰ "${teks}" → Alarm disetel pukul ${waktuBaru}`, "#10b981");
-      bicara(`Alarm disetel pukul ${waktuBaru.replace(":", " lewat ")}`, selesaiBicara);
+      bicara(`Alarm berhasil disetel pukul ${waktuBaru.replace(":", " lewat ")}`);
       return;
     }
 
     if (isNyalakan || teks.includes("aktif")) {
-      const val = document.getElementById("alarmInput").value || "06:00";
+      const val = getAlarmPickerValue();
       statusText.textContent = "Menyimpan " + val + "...";
       statusText.style.color = "#eab308";
       client.publish(TOPIC_CMD, "SET_ALARM:" + val);
       tampilkanStatusSuara(`⏰ "${teks}" → Alarm diaktifkan pukul ${val}`, "#10b981");
-      bicara(`Alarm diaktifkan pukul ${val.replace(":", " lewat ")}`, selesaiBicara);
+      bicara(`Alarm diaktifkan pukul ${val.replace(":", " lewat ")}`);
       return;
     }
   }
@@ -817,7 +740,7 @@ function eksekusiPerintahSuara(teks, lanjutStandby = false) {
   if (teks.includes("mode tewas") || teks.includes("mode sleep") || teks.includes("tidur")) {
     modeSleep();
     tampilkanStatusSuara(`🌙 "${teks}" → Mode Tewas diaktifkan`, "#6366f1");
-    bicara("Mode tewas diaktifkan, selamat beristirahat", selesaiBicara);
+    bicara("Mode tewas berhasil diaktifkan");
     return;
   }
 
@@ -827,25 +750,25 @@ function eksekusiPerintahSuara(teks, lanjutStandby = false) {
       if (!curPintu) {
         client.publish(TOPIC_CMD, "TOGGLE_PINTU");
         tampilkanStatusSuara(`🚪 "${teks}" → Pintu dibuka`, "#10b981");
-        bicara("Siap, pintu dibuka", selesaiBicara);
+        bicara("Pintu berhasil dibuka");
       } else {
         tampilkanStatusSuara(`🚪 Pintu sudah terbuka`, "#0ea5e9");
-        bicara("Pintu sudah terbuka", selesaiBicara);
+        bicara("Pintu sudah dalam keadaan terbuka");
       }
     } else if (teks.includes("kunci") || teks.includes("tutup")) {
       if (curPintu) {
         client.publish(TOPIC_CMD, "TOGGLE_PINTU");
         tampilkanStatusSuara(`🔒 "${teks}" → Pintu dikunci`, "#10b981");
-        bicara("Siap, pintu dikunci", selesaiBicara);
+        bicara("Pintu berhasil dikunci");
       } else {
         tampilkanStatusSuara(`🔒 Pintu sudah terkunci`, "#0ea5e9");
-        bicara("Pintu sudah terkunci", selesaiBicara);
+        bicara("Pintu sudah dalam keadaan terkunci");
       }
     } else {
-      const pesanSuara = curPintu ? "Siap, pintu dikunci" : "Siap, pintu dibuka";
+      const pesanSuara = curPintu ? "Pintu berhasil dikunci" : "Pintu berhasil dibuka";
       togglePintu();
       tampilkanStatusSuara(`🚪 "${teks}" → Status pintu diubah`, "#10b981");
-      bicara(pesanSuara, selesaiBicara);
+      bicara(pesanSuara);
     }
     return;
   }
@@ -857,7 +780,7 @@ function eksekusiPerintahSuara(teks, lanjutStandby = false) {
     if (curR2) { setTimeout(() => client.publish(TOPIC_CMD, "R2:0"), jeda); jeda += 250; }
     if (curR3) { setTimeout(() => client.publish(TOPIC_CMD, "R3:0"), jeda); }
     tampilkanStatusSuara(`🛑 "${teks}" → Semua perangkat dimatikan`, "#10b981");
-    bicara("Semua perangkat dimatikan", selesaiBicara);
+    bicara("Semua perangkat berhasil dimatikan");
     return;
   }
 
@@ -866,16 +789,16 @@ function eksekusiPerintahSuara(teks, lanjutStandby = false) {
     if (isMatikan) {
       if (curR1) client.publish(TOPIC_CMD, "R1:0");
       tampilkanStatusSuara(`💡 "${teks}" → Lampu dimatikan`, "#10b981");
-      bicara("Lampu dimatikan", selesaiBicara);
+      bicara("Lampu berhasil dimatikan");
     } else if (isNyalakan || durasi > 0) {
       if (!curR1 || durasi > 0) client.publish(TOPIC_CMD, "R1:" + durasi);
       tampilkanStatusSuara(`💡 "${teks}" → Lampu dinyalakan${labelDurasi}`, "#10b981");
-      bicara(durasi > 0 ? `Lampu dinyalakan selama ${teksDurasi}` : "Lampu dinyalakan", selesaiBicara);
+      bicara(durasi > 0 ? `Lampu berhasil dinyalakan selama ${teksDurasi}` : "Lampu berhasil dinyalakan");
     } else {
-      const pesanSuara = curR1 ? "Lampu dimatikan" : "Lampu dinyalakan";
+      const pesanSuara = curR1 ? "Lampu berhasil dimatikan" : "Lampu berhasil dinyalakan";
       toggleRelay(1);
       tampilkanStatusSuara(`💡 "${teks}" → Saklar lampu diubah`, "#10b981");
-      bicara(pesanSuara, selesaiBicara);
+      bicara(pesanSuara);
     }
     return;
   }
@@ -885,16 +808,16 @@ function eksekusiPerintahSuara(teks, lanjutStandby = false) {
     if (isMatikan) {
       if (curR2) client.publish(TOPIC_CMD, "R2:0");
       tampilkanStatusSuara(`🌀 "${teks}" → Kipas dimatikan`, "#10b981");
-      bicara("Kipas dimatikan", selesaiBicara);
+      bicara("Kipas berhasil dimatikan");
     } else if (isNyalakan || durasi > 0) {
       if (!curR2 || durasi > 0) client.publish(TOPIC_CMD, "R2:" + durasi);
       tampilkanStatusSuara(`🌀 "${teks}" → Kipas dinyalakan${labelDurasi}`, "#10b981");
-      bicara(durasi > 0 ? `Kipas dinyalakan selama ${teksDurasi}` : "Kipas dinyalakan", selesaiBicara);
+      bicara(durasi > 0 ? `Kipas berhasil dinyalakan selama ${teksDurasi}` : "Kipas berhasil dinyalakan");
     } else {
-      const pesanSuara = curR2 ? "Kipas dimatikan" : "Kipas dinyalakan";
+      const pesanSuara = curR2 ? "Kipas berhasil dimatikan" : "Kipas berhasil dinyalakan";
       toggleRelay(2);
       tampilkanStatusSuara(`🌀 "${teks}" → Saklar kipas diubah`, "#10b981");
-      bicara(pesanSuara, selesaiBicara);
+      bicara(pesanSuara);
     }
     return;
   }
@@ -904,22 +827,22 @@ function eksekusiPerintahSuara(teks, lanjutStandby = false) {
     if (isMatikan) {
       if (curR3) client.publish(TOPIC_CMD, "R3:0");
       tampilkanStatusSuara(`🔌 "${teks}" → Stopkontak dimatikan`, "#10b981");
-      bicara("Stopkontak dimatikan", selesaiBicara);
+      bicara("Stopkontak berhasil dimatikan");
     } else if (isNyalakan || durasi > 0) {
       if (!curR3 || durasi > 0) client.publish(TOPIC_CMD, "R3:" + durasi);
       tampilkanStatusSuara(`🔌 "${teks}" → Stopkontak dinyalakan${labelDurasi}`, "#10b981");
-      bicara(durasi > 0 ? `Stopkontak dinyalakan selama ${teksDurasi}` : "Stopkontak dinyalakan", selesaiBicara);
+      bicara(durasi > 0 ? `Stopkontak berhasil dinyalakan selama ${teksDurasi}` : "Stopkontak berhasil dinyalakan");
     } else {
-      const pesanSuara = curR3 ? "Stopkontak dimatikan" : "Stopkontak dinyalakan";
+      const pesanSuara = curR3 ? "Stopkontak berhasil dimatikan" : "Stopkontak berhasil dinyalakan";
       toggleRelay(3);
       tampilkanStatusSuara(`🔌 "${teks}" → Saklar stopkontak diubah`, "#10b981");
-      bicara(pesanSuara, selesaiBicara);
+      bicara(pesanSuara);
     }
     return;
   }
 
   tampilkanStatusSuara(`❓ Terdengar: "${teks}" (Perintah tidak dikenali)`, "#eab308");
-  bicara("Maaf, perintah tidak dikenali", selesaiBicara);
+  bicara("Maaf, perintah tidak dikenali");
 }
 
 // ==========================================
@@ -1047,7 +970,10 @@ function initApp() {
   }
 }
 
-window.onload = initApp;
+window.onload = function() {
+  initAlarmPicker();
+  initApp();
+};
 </script>
 </body>
 </html>
