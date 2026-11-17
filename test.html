@@ -13,15 +13,17 @@ body { margin: 0; padding: 15px; background: #0f1115; color: #e2e8f0; font-famil
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 5px; }
 .header h2 { margin: 0; font-size: 24px; color: #0ea5e9; font-weight: 700; letter-spacing: 0.5px; }
 .header p { margin: 2px 0 0 0; color: #64748b; font-size: 13px; }
-.header-actions { display: flex; align-items: center; gap: 10px; }
+.header-actions { display: flex; align-items: center; gap: 8px; }
 
 .card { background: #1e222a; padding: 20px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid #2a2e37; }
 .card h3 { margin: 0 0 20px 0; font-size: 18px; color: #f8fafc; font-weight: 600; display:flex; align-items:center; gap:8px;}
 
-/* TOMBOL MIC & BANNER SUARA */
-.mic-btn { background: #1e222a; border: 1px solid #334155; padding: 10px 14px; border-radius: 10px; display: flex; align-items: center; gap: 6px; font-size: 13px; color: #38bdf8; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-.mic-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
-.mic-btn.listening { background: #ef4444; border-color: #ef4444; color: white; animation: pulseMic 1.2s infinite; }
+/* TOMBOL IKON HEADER (ALARM & MIC) */
+.icon-btn { background: #1e222a; border: 1px solid #334155; padding: 10px 12px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #38bdf8; box-shadow: 0 4px 10px rgba(0,0,0,0.2); position: relative; }
+.icon-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
+.icon-btn.listening { background: #ef4444; border-color: #ef4444; color: white; animation: pulseMic 1.2s infinite; }
+.icon-btn.alarm-active { border-color: #10b981; color: #10b981; }
+.icon-btn.alarm-ringing { background: #f59e0b; border-color: #f59e0b; color: #0f1115; animation: pulseMic 1s infinite; }
 
 @keyframes pulseMic {
   0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
@@ -29,7 +31,24 @@ body { margin: 0; padding: 15px; background: #0f1115; color: #e2e8f0; font-famil
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 .voice-banner { display: none; background: #1e293b; border: 1px solid #0ea5e9; color: #e2e8f0; padding: 12px 15px; border-radius: 14px; margin-bottom: 16px; font-size: 13px; text-align: center; font-weight: 500; }
+.ring-alert-banner { display: none; background: #f59e0b; color: #0f1115; padding: 14px; border-radius: 14px; margin-bottom: 16px; font-size: 14px; font-weight: 800; text-align: center; cursor: pointer; animation: pulseMic 1s infinite; }
+
+/* MODAL POP-UP ALARM */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); z-index: 999; align-items: center; justify-content: center; padding: 15px; }
+.modal-box { background: #1e222a; border: 1px solid #334155; border-radius: 20px; width: 100%; max-width: 380px; padding: 22px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); animation: popIn 0.2s ease-out; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.modal-header h3 { margin: 0; font-size: 18px; color: #f8fafc; }
+.close-modal-btn { background: #2a2e37; color: #94a3b8; padding: 6px 11px; border-radius: 8px; font-size: 14px; line-height: 1; }
+.alarm-controls { display: flex; gap: 10px; align-items: center; }
+.alarm-time-input { margin: 0; flex: 1; text-align: center; font-size: 20px; font-weight: 700; letter-spacing: 1px; color-scheme: dark; }
+.alarm-status-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 14px; border-top: 1px solid #2a2e37; font-size: 13px; }
+.modal-hint { margin-top: 12px; font-size: 12px; color: #64748b; text-align: center; }
 
 /* WIDGET CUACA & SHOLAT */
 .info-widget { display: flex; gap: 12px; margin-bottom: 20px; }
@@ -47,8 +66,9 @@ button:active { transform: scale(0.97); }
 .on { background: #10b981; }
 .off { background: #ef4444; }
 .blue { background: #0ea5e9; }
+.muted { background: #334155; color: #cbd5e1; }
 
-.logout-btn { background: #ef4444; padding: 10px 14px; border-radius: 10px; display: flex; align-items: center; gap:6px; font-size:13px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); }
+.logout-btn { background: #ef4444; padding: 10px 12px; border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); }
 .logout-btn svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 
 /* SENSOR GAUGE */
@@ -84,7 +104,17 @@ button:active { transform: scale(0.97); }
     </div>
     <div id="logoutDiv">
       <div class="header-actions">
-        <button id="btnMic" class="mic-btn" onclick="mulaiPerintahSuara()" title="Perintah Suara">
+        <!-- IKON ALARM POP-UP -->
+        <button id="btnAlarmModal" class="icon-btn" onclick="bukaModalAlarm()" title="Atur Alarm">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="13" r="8"></circle>
+            <polyline points="12 9 12 13 14.5 14.5"></polyline>
+            <path d="M5 3L2 6"></path>
+            <path d="M22 6l-3-3"></path>
+          </svg>
+        </button>
+        <!-- IKON PERINTAH SUARA -->
+        <button id="btnMic" class="icon-btn" onclick="mulaiPerintahSuara()" title="Perintah Suara">
           <svg viewBox="0 0 24 24">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
@@ -92,6 +122,7 @@ button:active { transform: scale(0.97); }
             <line x1="8" y1="23" x2="16" y2="23"></line>
           </svg>
         </button>
+        <!-- IKON LOGOUT -->
         <button class="logout-btn" onclick="logout()" title="Logout">
           <svg viewBox="0 0 24 24">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -116,6 +147,11 @@ button:active { transform: scale(0.97); }
 
   <!-- DASHBOARD -->
   <div id="dashboard">
+
+    <!-- BANNER DARURAT SAAT ALARM BERBUNYI -->
+    <div id="ringAlertBanner" class="ring-alert-banner" onclick="hentikanBunyiAlarm()">
+      🔔 ALARM BERBUNYI! TAP DI SINI UNTUK MATIKAN
+    </div>
 
     <!-- BANNER FEEDBACK PERINTAH SUARA -->
     <div id="voiceStatus" class="voice-banner"></div>
@@ -176,7 +212,7 @@ button:active { transform: scale(0.97); }
       <h3>🎛️ Kontrol & Timer</h3>
 
       <button class="blue full" onclick="modeSleep()" style="margin-bottom: 15px; background: #6366f1;">
-        🌙 Mode Turu
+        🌙 Mode Tewas
       </button>
       
       <div class="device-row">
@@ -223,6 +259,31 @@ button:active { transform: scale(0.97); }
   </div>
 </div>
 
+<!-- POP-UP MODAL ALARM -->
+<div id="alarmModal" class="modal-overlay" onclick="tutupModalAlarm(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>⏰ Pengaturan Alarm</h3>
+      <button class="close-modal-btn" onclick="tutupModalAlarm()">✕</button>
+    </div>
+
+    <div class="alarm-controls">
+      <input type="time" id="alarmInput" class="alarm-time-input" value="05:30">
+      <button class="blue" style="padding: 14px 18px;" onclick="pasangAlarm()">Setel</button>
+      <button class="muted" style="padding: 14px 14px;" onclick="nonaktifkanAlarm()">Off</button>
+    </div>
+
+    <div class="alarm-status-bar">
+      <span style="color:#94a3b8;">Status saat ini:</span>
+      <span id="statusAlarmText" style="color:#64748b; font-weight:600;">Menunggu sinkronisasi...</span>
+    </div>
+
+    <div class="modal-hint">
+      💡 Suara: <i>"Pasang alarm jam 5 pagi"</i> atau <i>"Matikan alarm"</i>
+    </div>
+  </div>
+</div>
+
 <script>
 // ==========================================
 // 1. KONFIGURASI MQTT & STORAGE
@@ -235,9 +296,24 @@ const STORAGE_PASS = "emqx_pass";
 
 let client = null;
 let curR1 = false, curR2 = false, curR3 = false, curPintu = false;
+let curAlarmRing = false;
+let alarmInputInitialized = false;
 
 // ==========================================
-// 2. LOGIKA UI & MQTT
+// 2. KONTROL POP-UP MODAL ALARM
+// ==========================================
+function bukaModalAlarm() {
+  document.getElementById("alarmModal").style.display = "flex";
+}
+
+function tutupModalAlarm(e) {
+  if (!e || e.target.id === "alarmModal") {
+    document.getElementById("alarmModal").style.display = "none";
+  }
+}
+
+// ==========================================
+// 3. LOGIKA UI & MQTT
 // ==========================================
 function updateButton(id, state, timerLabelId, timeLeft) {
   const btn = document.getElementById(id);
@@ -266,6 +342,35 @@ function updateDashboard(data) {
   } else {
     pintu.textContent = "BUKA PINTU"; pintu.className = "off full";
     statPintu.textContent = "Terkunci Aman"; statPintu.style.color = "#ef4444";
+  }
+
+  // Update Status Alarm (Modal & Ikon Header)
+  const btnAlarmIcon = document.getElementById("btnAlarmModal");
+  if (data.alarm !== undefined && data.alarmOn !== undefined) {
+    if (!alarmInputInitialized) {
+      document.getElementById("alarmInput").value = data.alarm;
+      alarmInputInitialized = true;
+    }
+    const statusText = document.getElementById("statusAlarmText");
+    if (data.alarmOn) {
+      statusText.textContent = "Aktif • " + data.alarm + " WIB";
+      statusText.style.color = "#10b981";
+      btnAlarmIcon.classList.add("alarm-active");
+    } else {
+      statusText.textContent = "Nonaktif (" + data.alarm + ")";
+      statusText.style.color = "#64748b";
+      btnAlarmIcon.classList.remove("alarm-active");
+    }
+  }
+
+  if (data.alarmRing !== undefined) {
+    curAlarmRing = data.alarmRing;
+    document.getElementById("ringAlertBanner").style.display = data.alarmRing ? "block" : "none";
+    if (data.alarmRing) {
+      btnAlarmIcon.classList.add("alarm-ringing");
+    } else {
+      btnAlarmIcon.classList.remove("alarm-ringing");
+    }
   }
 
   if(data.suhu !== undefined) {
@@ -358,8 +463,35 @@ function modeSleep() {
   if (!curR2) { setTimeout(() => { client.publish(TOPIC_CMD, "R2:120"); }, jeda); }
 }
 
+// Fungsi Tombol UI Alarm
+function pasangAlarm() {
+  if (!client || !client.connected) {
+    alert("MQTT belum terhubung!");
+    return;
+  }
+  const val = document.getElementById("alarmInput").value;
+  if (!val) return;
+  const statusText = document.getElementById("statusAlarmText");
+  statusText.textContent = "Menyimpan " + val + "...";
+  statusText.style.color = "#eab308";
+  client.publish(TOPIC_CMD, "SET_ALARM:" + val);
+}
+
+function nonaktifkanAlarm() {
+  if (!client || !client.connected) return;
+  const statusText = document.getElementById("statusAlarmText");
+  statusText.textContent = "Mematikan alarm...";
+  statusText.style.color = "#eab308";
+  client.publish(TOPIC_CMD, "OFF_ALARM");
+}
+
+function hentikanBunyiAlarm() {
+  if (!client || !client.connected) return;
+  client.publish(TOPIC_CMD, "STOP_ALARM");
+}
+
 // ==========================================
-// 3. FITUR INPUT & OUTPUT SUARA (WEB SPEECH API)
+// 4. FITUR INPUT & OUTPUT SUARA (WEB SPEECH API)
 // ==========================================
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
@@ -367,13 +499,12 @@ let bannerTimeout = null;
 let sedangMendengarkan = false;
 let jedaEksekusiSuara = null;
 
-// Fungsi Output Suara (Text-to-Speech Bahasa Indonesia)
 function bicara(teks) {
   if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel(); // Hentikan suara sebelumnya agar tidak bertumpuk
+  window.speechSynthesis.cancel();
   const ucapan = new SpeechSynthesisUtterance(teks);
   ucapan.lang = "id-ID";
-  ucapan.rate = 1.05; // Kecepatan bicara natural
+  ucapan.rate = 1.05;
   ucapan.pitch = 1.0;
   window.speechSynthesis.speak(ucapan);
 }
@@ -400,9 +531,7 @@ function mulaiPerintahSuara() {
   }
   if (sedangMendengarkan) return;
 
-  // Hentikan suara sistem jika masih berbicara saat mic ditekan lagi
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-
   if (recognition) {
     try { recognition.abort(); } catch(e) {}
   }
@@ -419,7 +548,7 @@ function mulaiPerintahSuara() {
   recognition.onstart = function() {
     sedangMendengarkan = true;
     btnMic.classList.add("listening");
-    tampilkanStatusSuara("🎙️ Silakan bicara... (Contoh: 'Buka pintu')", "#ef4444", false);
+    tampilkanStatusSuara("🎙️ Silakan bicara... (Contoh: 'Pasang alarm jam 5 pagi')", "#ef4444", false);
   };
 
   recognition.onresult = function(event) {
@@ -485,22 +614,82 @@ function formatTeksDurasi(menit) {
   return "";
 }
 
+function ekstrakWaktuAlarm(teks) {
+  const match = teks.match(/(?:jam|pukul)?\s*(\d{1,2})(?:[:.](\d{1,2}))?/);
+  if (!match) return null;
+
+  let jam = parseInt(match[1], 10);
+  let menit = match[2] ? parseInt(match[2], 10) : 0;
+
+  if (jam < 0 || jam > 23 || menit < 0 || menit > 59) return null;
+
+  if ((teks.includes("malam") || teks.includes("sore")) && jam < 12) {
+    jam += 12;
+  } else if (teks.includes("siang") && jam >= 1 && jam <= 4) {
+    jam += 12;
+  } else if (teks.includes("pagi") && jam === 12) {
+    jam = 0;
+  }
+
+  return String(jam).padStart(2, "0") + ":" + String(menit).padStart(2, "0");
+}
+
 function eksekusiPerintahSuara(teks) {
   const isNyalakan = teks.includes("nyala") || teks.includes("hidup") || teks.includes("on");
-  const isMatikan  = teks.includes("mati") || teks.includes("patikan") || teks.includes("off");
+  const isMatikan  = teks.includes("mati") || teks.includes("patikan") || teks.includes("off") || teks.includes("henti") || teks.includes("diam");
   const durasi     = ekstrakDurasiMenit(teks);
   const teksDurasi = formatTeksDurasi(durasi);
   const labelDurasi = durasi > 0 ? ` (${teksDurasi})` : "";
 
-  // 1. Mode turu / Sleep
-  if (teks.includes("mode turu") || teks.includes("mode sleep") || teks.includes("tidur")) {
+  // 1. Kontrol Alarm
+  if (teks.includes("alarm")) {
+    const statusText = document.getElementById("statusAlarmText");
+    if (isMatikan || teks.includes("nonaktif") || teks.includes("batal")) {
+      if (curAlarmRing && !teks.includes("nonaktif")) {
+        client.publish(TOPIC_CMD, "STOP_ALARM");
+        tampilkanStatusSuara(`🔕 "${teks}" → Bunyi alarm dihentikan`, "#10b981");
+        bicara("Bunyi alarm berhasil dihentikan");
+      } else {
+        statusText.textContent = "Mematikan alarm...";
+        statusText.style.color = "#eab308";
+        client.publish(TOPIC_CMD, "OFF_ALARM");
+        tampilkanStatusSuara(`🔕 "${teks}" → Alarm dinonaktifkan`, "#10b981");
+        bicara("Alarm berhasil dinonaktifkan");
+      }
+      return;
+    }
+
+    const waktuBaru = ekstrakWaktuAlarm(teks);
+    if (waktuBaru) {
+      document.getElementById("alarmInput").value = waktuBaru;
+      statusText.textContent = "Menyimpan " + waktuBaru + "...";
+      statusText.style.color = "#eab308";
+      client.publish(TOPIC_CMD, "SET_ALARM:" + waktuBaru);
+      tampilkanStatusSuara(`⏰ "${teks}" → Alarm disetel pukul ${waktuBaru}`, "#10b981");
+      bicara(`Alarm berhasil disetel pukul ${waktuBaru.replace(":", " lewat ")}`);
+      return;
+    }
+
+    if (isNyalakan || teks.includes("aktif")) {
+      const val = document.getElementById("alarmInput").value || "06:00";
+      statusText.textContent = "Menyimpan " + val + "...";
+      statusText.style.color = "#eab308";
+      client.publish(TOPIC_CMD, "SET_ALARM:" + val);
+      tampilkanStatusSuara(`⏰ "${teks}" → Alarm diaktifkan pukul ${val}`, "#10b981");
+      bicara(`Alarm diaktifkan pukul ${val.replace(":", " lewat ")}`);
+      return;
+    }
+  }
+
+  // 2. Mode Tewas / Sleep
+  if (teks.includes("mode tewas") || teks.includes("mode sleep") || teks.includes("tidur")) {
     modeSleep();
-    tampilkanStatusSuara(`🌙 "${teks}" → Mode turu diaktifkan`, "#6366f1");
-    bicara("Mode turu berhasil diaktifkan");
+    tampilkanStatusSuara(`🌙 "${teks}" → Mode Tewas diaktifkan`, "#6366f1");
+    bicara("Mode tewas berhasil diaktifkan");
     return;
   }
 
-  // 2. Pintu
+  // 3. Pintu
   if (teks.includes("pintu")) {
     if (teks.includes("buka")) {
       if (!curPintu) {
@@ -529,7 +718,7 @@ function eksekusiPerintahSuara(teks) {
     return;
   }
 
-  // 3. Matikan Semua Perangkat
+  // 4. Matikan Semua Perangkat
   if (isMatikan && teks.includes("semua")) {
     let jeda = 0;
     if (curR1) { setTimeout(() => client.publish(TOPIC_CMD, "R1:0"), jeda); jeda += 250; }
@@ -540,7 +729,7 @@ function eksekusiPerintahSuara(teks) {
     return;
   }
 
-  // 4. Lampu (R1)
+  // 5. Lampu (R1)
   if (teks.includes("lampu")) {
     if (isMatikan) {
       if (curR1) client.publish(TOPIC_CMD, "R1:0");
@@ -559,7 +748,7 @@ function eksekusiPerintahSuara(teks) {
     return;
   }
 
-  // 5. Kipas (R2)
+  // 6. Kipas (R2)
   if (teks.includes("kipas")) {
     if (isMatikan) {
       if (curR2) client.publish(TOPIC_CMD, "R2:0");
@@ -578,7 +767,7 @@ function eksekusiPerintahSuara(teks) {
     return;
   }
 
-  // 6. Stopkontak (R3)
+  // 7. Stopkontak (R3)
   if (teks.includes("stopkontak") || teks.includes("stop kontak") || teks.includes("colokan")) {
     if (isMatikan) {
       if (curR3) client.publish(TOPIC_CMD, "R3:0");
@@ -602,7 +791,7 @@ function eksekusiPerintahSuara(teks) {
 }
 
 // ==========================================
-// 4. KONEKSI MQTT & INIT
+// 5. KONEKSI MQTT & INIT
 // ==========================================
 function connectMQTT(u, p) {
   if (client) client.end();
@@ -647,13 +836,12 @@ document.getElementById("loginForm").addEventListener("submit", function(e) {
 });
 
 // ==========================================
-// 5. WIDGET CUACA & SHOLAT (VERSI CACHE)
+// 6. WIDGET CUACA & SHOLAT (VERSI CACHE)
 // ==========================================
 async function loadWidgets() {
   try {
     const nowTime = new Date().getTime();
     
-    // 1. CEK CACHE CUACA (Update tiap 30 Menit)
     let wDataStr = localStorage.getItem("weatherCache");
     let wDataTime = localStorage.getItem("weatherTime");
     let wData;
@@ -677,7 +865,6 @@ async function loadWidgets() {
     document.getElementById("w-icon").textContent = icon;
     document.getElementById("w-desc").textContent = desc;
 
-    // 2. CEK CACHE SHOLAT (Update tiap 24 Jam)
     let pDataStr = localStorage.getItem("prayerCache");
     let pDataTime = localStorage.getItem("prayerTime");
     let pData;
